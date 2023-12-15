@@ -116,9 +116,9 @@ int ray_sph_light(sph_t *sph, vec3_t *c, vec3_t *p, vec3_t *d,
 	}
 
 	{
-		real_t m = 100;
+		real_t m = 50;
 
-		a = m * 2 * a * a * sph->r / (s * s);
+		a = m * 2 * a * a * sph->r;
 
 		vec3_fma(c, c, a, &vec3_unit);
 

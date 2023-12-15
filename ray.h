@@ -4,8 +4,6 @@
 #include "mat.h"
 #include "vec.h"
 
-#define RAY_DEPTH 4
-
 typedef struct
 {
 	void *		prev;		/* Previous object */

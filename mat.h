@@ -5,7 +5,7 @@
 #include "tex.h"
 #include "vec.h"
 
-#define MAT_NOATT	1
+#define MAT_FLAT	1
 
 typedef struct
 {

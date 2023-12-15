@@ -1,28 +1,36 @@
+#include <stdio.h>
 #include <tgmath.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 #include "cam.h"
+#include "clrender.h"
 #include "render.h"
 #include "rt.h"
 #include "scene.h"
 #include "vec.h"
 #include "vp.h"
 
-#ifdef DEBUG
-#define N_THRD	0
-#else
-#define N_THRD	4
-#endif
+#define RT_CL
+
 #define WIDTH	800
 #define HEIGHT	600
 
-#if N_THRD != 0
+#ifndef DEBUG
+#define N_THRD	4
+#else
+#define N_THRD	0
+#endif
+
+#ifdef RT_CL
+#elif N_THRD != 0
 static render_task_t	rt_list[N_THRD];
 #endif
 
 static GLuint		fbo;
 static GLuint		tex;
-static unsigned char	pb[WIDTH * HEIGHT * 3];
+static unsigned char	pb[WIDTH * HEIGHT * 4];
 static vec3_t		sb[WIDTH * HEIGHT];
 static int		sn;
 
@@ -38,6 +46,46 @@ int			mouse_l;
 int			mouse_r;
 int			render_x;
 int			render_y;
+
+static void export(void)
+{
+#ifdef O_BINARY
+	int m = O_WRONLY | O_BINARY | O_CREAT | O_TRUNC;
+#else
+	int m = O_WRONLY | O_CREAT | O_TRUNC;
+#endif
+	int s = sizeof(pb);
+	int fd = open("./rt.bmp", m, 0664);
+
+#define wr(t, d) \
+({ \
+	t wr_data__ = (d); \
+	write(fd, &wr_data__, sizeof(wr_data__)); \
+})
+	wr(	short,	0x4D42	);
+	wr(	int,	54 + s	);
+	wr(	short,	0	);
+	wr(	short,	0	);
+	wr(	int,	54	);
+
+	wr(	int,	40	);
+	wr(	int,	WIDTH	);
+	wr(	int,	HEIGHT	);
+	wr(	short,	1	);
+	wr(	short,	32	);
+	wr(	int,	0	);
+	wr(	int,	s	);
+	wr(	int,	0	);
+	wr(	int,	0	);
+	wr(	int,	0	);
+	wr(	int,	0	);
+#undef wr
+
+	write(fd, pb, s);
+	close(fd);
+
+	fprintf(stderr, "Image saved\n");
+}
 
 static void update(void)
 {
@@ -85,24 +133,27 @@ static void update(void)
 
 static void display_func(void)
 {
+	struct timespec	time_a;
+	struct timespec	time_b;
+
 	update();
 
-#if N_THRD != 0
+	clock_gettime(CLOCK_REALTIME, &time_a);
+#ifdef RT_CL
+	clrender_commit(&cam, &vp, pb, sb, sn);
+	clrender_wait();
+#elif N_THRD != 0
 	render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
 	render_task_wait(rt_list, N_THRD);
 #else
 	render(&cam, &vp, pb, sb, sn);
 #endif
-
-	if (sn != 0)
-	{
-		fprintf(stderr, "samples: %i\n", sn++);
-	}
+	clock_gettime(CLOCK_REALTIME, &time_b);
 
 	{
 		glBindTexture(GL_TEXTURE_2D, tex);
 		glTexImage2D(	GL_TEXTURE_2D, 0, GL_RGB,
-				WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE,
+				WIDTH, HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE,
 				pb);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
 		glFramebufferTexture2D(	GL_READ_FRAMEBUFFER,
@@ -115,6 +166,24 @@ static void display_func(void)
 
 		glutSwapBuffers();
 		glutPostRedisplay();
+	}
+
+	{
+		int s = time_b.tv_sec - time_a.tv_sec;
+		int n = time_b.tv_nsec - time_a.tv_nsec;
+
+		if (n < 0)
+		{
+			s = s - 1;
+			n = n + 1000000000;
+		}
+
+		fprintf(stderr, "Frame time: %i.%09i\n", s, n);
+	}
+
+	if (sn != 0)
+	{
+		fprintf(stderr, "Samples: %i\n", sn++);
 	}
 }
 
@@ -138,9 +207,9 @@ static void mouse_func(int bn, int st, int x, int y)
 
 static void keyboard_func(unsigned char key, int x, int y)
 {
-	if (key == 27)
+	if (key == 'S' || key == 's')
 	{
-		glutLeaveMainLoop();
+		export();
 	}
 	else if (key == 13)
 	{
@@ -152,6 +221,10 @@ static void keyboard_func(unsigned char key, int x, int y)
 		{
 			sn = 0;
 		}
+	}
+	else if (key == 27)
+	{
+		glutLeaveMainLoop();
 	}
 }
 
@@ -189,7 +262,9 @@ int main(int argc, char *argv[])
 
 	scene_init();
 
-#if N_THRD != 0
+#ifdef RT_CL
+	clrender_init(pb, &vp, &scene);
+#elif N_THRD != 0
 	render_task_init(rt_list, N_THRD);
 #endif
 
@@ -219,7 +294,8 @@ int main(int argc, char *argv[])
 		glutMainLoop();
 	}
 
-#if N_THRD != 0
+#ifdef RT_CL
+#elif N_THRD != 0
 	render_task_dstr(rt_list, N_THRD);
 #endif
 

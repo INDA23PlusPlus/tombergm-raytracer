@@ -1,14 +1,36 @@
+#include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include "stb_image.h"
 #include "tex.h"
 #include "vec.h"
 
+#define BILERP
+
 int tex_load_c(tex_t *tex, const char *filename)
 {
 	int n;
 
 	tex->c = stbi_load(filename, &tex->w, &tex->h, &n, 3);
+
+#if 1
+	/* Gamma correction */
+	if (tex->c != NULL)
+	{
+		for (int y = 0; y < tex->h; y++)
+		{
+			for (int x = 0; x < tex->w; x++)
+			{
+				int i = (y * tex->w + x) * 3;
+				unsigned char *p = &tex->c[i];
+
+				p[0] = 0.5 + pow(p[0] / 255., 2.2) * 255.;
+				p[1] = 0.5 + pow(p[1] / 255., 2.2) * 255.;
+				p[2] = 0.5 + pow(p[2] / 255., 2.2) * 255.;
+			}
+		}
+	}
+#endif
 
 	return tex->c != NULL;
 }

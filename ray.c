@@ -2,16 +2,19 @@
 #include <tgmath.h>
 #include "mat.h"
 #include "ray.h"
+#include "rt.h"
 #include "scene.h"
 #include "sph.h"
 #include "tex.h"
 #include "tri.h"
 #include "vec.h"
 
+#define RAY_DEPTH 4
+
 void ray_shade(ray_t *ray)
 {
 	const mat_t *	mat		= ray->mat;
-	real_t		n_cos		= vec3_dot(&ray->d, &ray->n);
+	real_t		n_cos;
 	real_t		n_sin_sq;
 	vec3_t		tc		= vec3_unit;
 	vec3_t		tn;
@@ -27,38 +30,82 @@ void ray_shade(ray_t *ray)
 			vec3_scale(&ray->n, tn.z, &ray->n);
 			vec3_fma(&ray->n, &ray->n, tn.x, &ray->tu);
 			vec3_fma(&ray->n, &ray->n, tn.y, &ray->tv);
+			vec3_norm(&ray->n, &ray->n);
 		}
 	}
 
-	{
-		vec3_nmul(&tc, &tc, &mat->col);
-
-		tr = tr * mat->dif;
-		if (tr > 1) tr = 1;
-		if (tr < 0) tr = 0;
-
-		vec3_diffuse(&ray->n, &ray->n, tr * M_PI / 2);
-	}
-
+	n_cos = vec3_dot(&ray->d, &ray->n);
+	vec3_nmul(&tc, &tc, &mat->col);
 	vec3_sub(&r, &ray->q, &ray->p);
 
-	/* Reflection */
-	if (mat->ref != 0)
+	float ref_rc = ray->mat->ref;
+	float tra_rc = tr;
+	float ind;
+	float R;
+
+	if (n_cos < 0)
 	{
-		vec3_t c;
-		vec3_t d;
-
-		vec3_set(&c, &vec3_zero);
-		vec3_fma(&d, &ray->d, -2 * n_cos, &ray->n);
-
-		ray_trace(&c, &ray->q, &d, ray);
-
-		vec3_fma(&ray->c, &ray->c, mat->ref, &c);
+		ind = mat->ind;
+	}
+	else
+	{
+		ind = 1. / mat->ind;
 	}
 
-	/* Transmission */
-	if (mat->tra != 0)
 	{
+		/* Fresnel equation for non-magnetic reflectivity */
+		float b = ind * ind + n_cos * n_cos - 1;
+
+		if (b < 0)
+		{
+			/* Total internal reflection */
+			R = 1.0 / 0.0;
+			ref_rc = 1;
+		}
+		else
+		{
+			b = sqrt(b);
+			R = (fabs(n_cos) - b) / (fabs(n_cos) + b);
+			R = R * R;
+		}
+	}
+
+	if (flt_rand() * mat->tra <= R)
+	{
+		if (flt_rand() * tr < mat->dif)
+		{
+			/* Diffuse reflection */
+			vec3_t c;
+			vec3_t d;
+
+			vec3_set(&c, &vec3_zero);
+			vec3_diffuse(&d, &ray->n, M_PI / 2);
+
+			ray_trace(&c, &ray->q, &d, ray);
+
+			vec3_fma(&ray->c, &ray->c,
+					ref_rc
+					* fabs(vec3_dot(&d, &ray->n))
+					* 2,
+					&c);
+		}
+		else
+		{
+			/* Specular reflection */
+			vec3_t c;
+			vec3_t d;
+
+			vec3_set(&c, &vec3_zero);
+			vec3_fma(&d, &ray->d, -2 * n_cos, &ray->n);
+
+			ray_trace(&c, &ray->q, &d, ray);
+
+			vec3_fma(&ray->c, &ray->c, ref_rc, &c);
+		}
+	}
+	else
+	{
+		/* Transmission */
 		vec3_t c;
 		vec3_t d;
 
@@ -66,33 +113,16 @@ void ray_shade(ray_t *ray)
 
 		vec3_scale(&d, n_cos, &ray->n);
 		vec3_sub(&d, &ray->d, &d);
-		if (n_cos < 0)
-		{
-			/* Refract in to material */
-			vec3_scale(&d, 1 / mat->ind, &d);
-		}
-		else
-		{
-			/* Refract out of material */
-			vec3_scale(&d, 1 * mat->ind, &d);
-		}
+		vec3_scale(&d, 1 / ind, &d);
 		n_sin_sq = vec3_len_sq(&d);
 
-		if (n_sin_sq > 1)
-		{
-			/* Total internal reflection */
-			vec3_fma(&d, &ray->d, -2 * n_cos, &ray->n);
-		}
-		else
-		{
-			vec3_fma(&d, &d,
-				copysign(sqrt(1 - n_sin_sq), n_cos),
-				&ray->n);
-		}
+		vec3_fma(&d, &d,
+			copysign(sqrt(1 - n_sin_sq), n_cos),
+			&ray->n);
 
 		ray_trace(&c, &ray->q, &d, ray);
 
-		vec3_fma(&ray->c, &ray->c, mat->tra, &c);
+		vec3_fma(&ray->c, &ray->c, tra_rc, &c);
 	}
 
 	/* Ambient */
@@ -105,8 +135,9 @@ void ray_shade(ray_t *ray)
 		vec3_nmul(&ray->c, &ray->c, &tc);
 	}
 
+#if 0
 	/* Attenuation */
-	if ((mat->flg & MAT_NOATT) == 0)
+	if ((mat->flg & MAT_FLAT) == 0)
 	{
 		real_t m = 100;
 		real_t a = m / vec3_len_sq(&r);
@@ -118,6 +149,7 @@ void ray_shade(ray_t *ray)
 
 		vec3_scale(&ray->c, a, &ray->c);
 	}
+#endif
 }
 
 int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
@@ -147,21 +179,21 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 
 	for (int i = 0; i < scene.n_tri; i++)
 	{
-		tri_t *tri = &scene.tri[i];
+		tri_t *tri = &scene.p_tri[i];
 
 		tri_trace(tri, &ray);
 	}
 
 	for (int i = 0; i < scene.n_sph; i++)
 	{
-		sph_t *sph = &scene.sph[i];
+		sph_t *sph = &scene.p_sph[i];
 
 		sph_trace(sph, &ray);
 	}
 
 	for (int i = 0; i < scene.n_sph_light; i++)
 	{
-		sph_t *sph = &scene.sph_light[i];
+		sph_t *sph = &scene.p_sph_light[i];
 
 		ray_sph_light(sph, c, p, d, &ray.l, ray.depth + 1);
 	}
@@ -172,9 +204,10 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 		vec3_add(c, c, &ray.c);
 	}
 
+#if 1
 	{
 		/* Directional light */
-		real_t lm	= 0.50;
+		real_t lm	= 0.5;
 		vec3_t lc	= { 1.00, 1.00, 0.95 };
 		vec3_t ln	= {  0.1, -1.0,  0.1 };
 
@@ -187,6 +220,7 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 			vec3_fma(c, c, -a * lm, &lc);
 		}
 	}
+#endif
 
 	return 0;
 }

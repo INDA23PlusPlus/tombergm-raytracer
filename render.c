@@ -33,7 +33,7 @@ static int rt_work(	int task_num, int task_max,
 	{
 		for (int x = 0; x < w; x++)
 		{
-			unsigned char *	pix	= &pb[(y * w + x) * 3];
+			unsigned char *	pix	= &pb[(y * w + x) * 4];
 			vec3_t		c;
 			vec3_t		d;
 			real_t		rs	= l + x * (r - l) / (w - 1);
@@ -69,18 +69,30 @@ static int rt_work(	int task_num, int task_max,
 				{
 					real_t m = sn;
 
+#if 1
+					vec3_add(s, s, &c);
+					vec3_scale(&c, 1 / m, s);
+#else
 					vec3_scale(s, (m - 1) / m, s);
 					vec3_fma(s, s, 1 / m, &c);
 
 					c = *s;
+#endif
 				}
 			}
 
+#if 1
+			/* Gamma correction */
+			c.x = pow(c.x, 1. / 2.2);
+			c.y = pow(c.y, 1. / 2.2);
+			c.z = pow(c.z, 1. / 2.2);
+#endif
+
 			vec3_clamp(&c, &c, &vec3_zero, &vec3_unit);
 
-			pix[0] = c.x * nextafter(256, 0);
-			pix[1] = c.y * nextafter(256, 0);
-			pix[2] = c.z * nextafter(256, 0);
+			pix[0] = 0.5 + c.z * 255;
+			pix[1] = 0.5 + c.y * 255;
+			pix[2] = 0.5 + c.x * 255;
 		}
 	}
 
