@@ -1,3 +1,4 @@
+#include <string.h>
 #include <CL/opencl.h>
 #include "cldata.h"
 #include "scene.h"

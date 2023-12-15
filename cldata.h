@@ -1,7 +1,7 @@
 #ifndef CLDATA_H
 #define CLDATA_H
 
-#include <CL/OpenCL.h>
+#include <CL/opencl.h>
 #include "scene.h"
 
 typedef cl_float	real_cl_t;
