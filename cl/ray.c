@@ -6,7 +6,7 @@
 #include "tri.h"
 #include "vec.h"
 
-#define RAY_DEPTH 4
+#define RAY_DEPTH 8
 
 static inline
 void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
