@@ -4,7 +4,7 @@ SRC		= cldata.c clrender.c main.c ray.c render.c scene.c sph.c stb_image.c tex.c
 CLSRCDIR	= ./cl/
 CLSRC		= main.c ray.c render.c sph.c tex.c tri.c vec.c
 OBJDIR		= ./obj/
-CPPFLAGS	= -DCL_TARGET_OPENCL_VERSION=300
+CPPFLAGS	= -DCL_TARGET_OPENCL_VERSION=200
 ifeq ($(DEBUG),1)
 CPPFLAGS	+= -DDEBUG
 CFLAGS		+= -Og -g -Wall

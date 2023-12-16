@@ -47,20 +47,26 @@ int			mouse_r;
 int			render_x;
 int			render_y;
 
-static void export(void)
+static int export(void)
 {
+	int ret	= 0;
 #ifdef O_BINARY
-	int m = O_WRONLY | O_BINARY | O_CREAT | O_TRUNC;
+	int m	= O_WRONLY | O_BINARY | O_CREAT | O_TRUNC;
 #else
-	int m = O_WRONLY | O_CREAT | O_TRUNC;
+	int m	= O_WRONLY | O_CREAT | O_TRUNC;
 #endif
-	int s = sizeof(pb);
-	int fd = open("./rt.bmp", m, 0664);
+	int s	= sizeof(pb);
+	int fd	= open("./rt.bmp", m, 0664);
 
 #define wr(t, d) \
 ({ \
 	t wr_data__ = (d); \
-	write(fd, &wr_data__, sizeof(wr_data__)); \
+	int wr_ret__ = write(fd, &wr_data__, sizeof(wr_data__)); \
+	if (wr_ret__ != sizeof(wr_data__)) \
+	{ \
+		ret = -1; \
+		goto exit; \
+	} \
 })
 	wr(	short,	0x4D42	);
 	wr(	int,	54 + s	);
@@ -81,10 +87,21 @@ static void export(void)
 	wr(	int,	0	);
 #undef wr
 
-	write(fd, pb, s);
-	close(fd);
+	if (write(fd, pb, s) != s)
+	{
+		ret = -1;
+		goto exit;
+	}
 
 	fprintf(stderr, "Image saved\n");
+
+exit:
+	if (fd != -1)
+	{
+		close(fd);
+	}
+
+	return ret;
 }
 
 static void update(void)
