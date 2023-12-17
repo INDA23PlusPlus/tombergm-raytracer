@@ -14,19 +14,21 @@
 
 #define RT_CL
 
-#define WIDTH	800
-#define HEIGHT	600
-
 #ifndef DEBUG
 #define N_THRD	4
 #else
 #define N_THRD	0
 #endif
 
+#define WIDTH	800
+#define HEIGHT	600
+
 #ifdef RT_CL
-#elif N_THRD != 0
-static render_task_t	rt_list[N_THRD];
+static int		use_cl = 1;
+#else
+static int		use_cl = 0;
 #endif
+static render_task_t	rt_list[N_THRD];
 
 static GLuint		fbo;
 static GLuint		tex;
@@ -35,7 +37,6 @@ static vec3_t		sb[WIDTH * HEIGHT];
 static int		sn;
 
 static real_t		r;
-static real_t		t;
 static cam_t		cam;
 static vp_t		vp;
 static char		keys[256];
@@ -144,28 +145,65 @@ static void update(void)
 	{
 		vec3_fma(&cam.p, &cam.p, -0.1, &cam.fv);
 	}
-
-	t = t + 0.01;
 }
 
 static void display_func(void)
 {
-	struct timespec	time_a;
-	struct timespec	time_b;
+	static int		time_set;
+	static struct timespec	disp_time;
+	static struct timespec	rate_time;
+	static int		rate_frame;
+	static long		rate_ns;
+	static float		fps;
+
+	struct timespec now;
+	clock_gettime(CLOCK_REALTIME, &now);
+
+	if (time_set)
+	{
+		long dd	= 	(now.tv_sec - disp_time.tv_sec) * 1000000000l
+				+ now.tv_nsec - disp_time.tv_nsec;
+		long rd	= 	(now.tv_sec - rate_time.tv_sec) * 1000000000l
+				+ now.tv_nsec - rate_time.tv_nsec;
+
+		disp_time = now;
+
+		rate_frame++;
+		rate_ns = rate_ns + dd;
+
+		if (rd >= 1000000000l)
+		{
+			fps = rate_frame * (1000000000.f / rate_ns);
+
+			rate_time = now;
+			rate_frame = 0;
+			rate_ns = 0;
+		}
+	}
+	else
+	{
+		disp_time = now;
+		rate_time = now;
+
+		time_set = 1;
+	}
 
 	update();
 
-	clock_gettime(CLOCK_REALTIME, &time_a);
-#ifdef RT_CL
-	clrender_commit(&cam, &vp, pb, sb, sn);
-	clrender_wait();
-#elif N_THRD != 0
-	render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
-	render_task_wait(rt_list, N_THRD);
-#else
-	render(&cam, &vp, pb, sb, sn);
-#endif
-	clock_gettime(CLOCK_REALTIME, &time_b);
+	if (use_cl)
+	{
+		clrender_commit(&cam, &vp, pb, sb, sn);
+		clrender_wait();
+	}
+	else if (N_THRD != 0)
+	{
+		render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
+		render_task_wait(rt_list, N_THRD);
+	}
+	else
+	{
+		render(&cam, &vp, pb, sb, sn);
+	}
 
 	{
 		glBindTexture(GL_TEXTURE_2D, tex);
@@ -186,21 +224,23 @@ static void display_func(void)
 	}
 
 	{
-		int s = time_b.tv_sec - time_a.tv_sec;
-		int n = time_b.tv_nsec - time_a.tv_nsec;
+		char t[64];
 
-		if (n < 0)
+		if (sn == 0)
 		{
-			s = s - 1;
-			n = n + 1000000000;
+			sprintf(t, "FPS: %.2f    Samples: %i\n", fps, 1);
+		}
+		else
+		{
+			sprintf(t, "FPS: %.2f    Samples: %i\n", fps, sn);
 		}
 
-		fprintf(stderr, "Frame time: %i.%09i\n", s, n);
+		glutSetWindowTitle(t);
 	}
 
 	if (sn != 0)
 	{
-		fprintf(stderr, "Samples: %i\n", sn++);
+		sn++;
 	}
 }
 
@@ -279,11 +319,32 @@ int main(int argc, char *argv[])
 
 	scene_init();
 
-#ifdef RT_CL
-	clrender_init(pb, &vp, &scene);
-#elif N_THRD != 0
-	render_task_init(rt_list, N_THRD);
-#endif
+	if (use_cl)
+	{
+		if (clrender_init(pb, &vp, &scene) != 0)
+		{
+			use_cl = 0;
+
+			fprintf(stderr, "OpenCL unavailable\n");
+		}
+	}
+
+	if (!use_cl)
+	{
+		if (N_THRD != 0)
+		{
+			render_task_init(rt_list, N_THRD);
+
+			fprintf(stderr,
+				"Using CPU rendering with %i threads\n",
+				N_THRD);
+		}
+		else
+		{
+			fprintf(stderr,
+				"Using single-threaded CPU rendering\n");
+		}
+	}
 
 	{
 		glutInit(&argc, argv);
@@ -311,10 +372,10 @@ int main(int argc, char *argv[])
 		glutMainLoop();
 	}
 
-#ifdef RT_CL
-#elif N_THRD != 0
-	render_task_dstr(rt_list, N_THRD);
-#endif
+	if (!use_cl && N_THRD != 0)
+	{
+		render_task_dstr(rt_list, N_THRD);
+	}
 
 	scene_dstr();
 }
