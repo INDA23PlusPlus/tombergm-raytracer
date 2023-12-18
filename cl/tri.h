@@ -3,9 +3,9 @@
 
 #include "vec.h"
 
-typedef struct mat_struct	mat_t;
-typedef struct ray_struct	ray_t;
-typedef struct tri_struct	tri_t;
+typedef __constant struct mat_struct	mat_t;
+typedef struct ray_struct		ray_t;
+typedef __constant struct tri_struct	tri_t;
 
 struct tri_struct
 {
@@ -39,6 +39,8 @@ struct tri_struct
 	};
 };
 
-static inline void tri_trace(tri_t *tri, ray_t *ray);
+real_t	tri_trace(	const tri_t *tri, vec3_t *p, vec3_t *d,
+			real_t m, __constant void *prev);
+void	tri_hit(const tri_t *tri, ray_t *ray);
 
 #endif

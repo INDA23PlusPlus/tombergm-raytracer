@@ -1,7 +1,14 @@
 #include <string.h>
 #include <CL/opencl.h>
 #include "cldata.h"
+#include "bih.h"
+#include "box.h"
+#include "mat.h"
+#include "prim.h"
 #include "scene.h"
+#include "sph.h"
+#include "tex.h"
+#include "tri.h"
 
 static int	n_bufs;
 static void *	p_bufs[512];
@@ -34,6 +41,18 @@ static void copy_vec3(vec3_cl_t *vec_cl, const vec3_t *vec)
 	vec_cl->x = vec->x;
 	vec_cl->y = vec->y;
 	vec_cl->z = vec->z;
+}
+
+static void copy_box(	cl_context c, cl_command_queue q,
+			box_cl_t *box_cl, const box_t *box,
+			scene_cl_t *scene_cl, const scene_t *scene)
+{
+	box_cl->min[0] = box->min[0];
+	box_cl->min[1] = box->min[1];
+	box_cl->min[2] = box->min[2];
+	box_cl->max[0] = box->max[0];
+	box_cl->max[1] = box->max[1];
+	box_cl->max[2] = box->max[2];
 }
 
 static void copy_tex(	cl_context c, cl_command_queue q,
@@ -152,6 +171,48 @@ static void copy_sph(	cl_context c, cl_command_queue q,
 	sph_cl->mat = scene_cl->p_mat + (sph->mat - scene->p_mat);
 }
 
+static void copy_prim(	cl_context c, cl_command_queue q,
+			prim_cl_t *prim_cl, const prim_t *prim,
+			scene_cl_t *scene_cl, const scene_t *scene)
+{
+	prim_cl->type = prim->type;
+
+	switch (prim->type)
+	{
+		case PRIM_TRI:
+		{
+			prim_cl->ptr =
+				scene_cl->p_tri +
+				((tri_t *) prim->ptr - scene->p_tri);
+			break;
+		}
+		case PRIM_SPH:
+		{
+			prim_cl->ptr =
+				scene_cl->p_sph +
+				((sph_t *) prim->ptr - scene->p_sph);
+			break;
+		}
+	}
+}
+
+static void copy_bih(	cl_context c, cl_command_queue q,
+			bih_cl_t *bih_cl, const bih_t *bih,
+			scene_cl_t *scene_cl, const scene_t *scene)
+{
+	bih_cl->val = bih->val;
+
+	if ((bih->val & 3) == 3)
+	{
+		bih_cl->num = bih->num;
+	}
+	else
+	{
+		bih_cl->clip[0] = bih->clip[0];
+		bih_cl->clip[1] = bih->clip[1];
+	}
+}
+
 static void copy_scene(	cl_context c, cl_command_queue q,
 			scene_cl_t *scene_cl, const scene_t *scene)
 {
@@ -220,20 +281,38 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 	}
 
 	{
-		scene_cl->n_sph_light = scene->n_sph_light;
-		scene_cl->p_sph_light =
-			clmalloc(c, q, sizeof(sph_cl_t) * scene->n_sph_light);
+		scene_cl->n_prim = scene->n_prim;
+		scene_cl->p_prim =
+			clmalloc(c, q, sizeof(prim_cl_t) * scene->n_prim);
 
-		for (int i = 0; i < scene->n_sph_light; i++)
+		for (int i = 0; i < scene->n_prim; i++)
 		{
-			copy_sph(	c, q,
-					&scene_cl->p_sph_light[i],
-					&scene->p_sph_light[i],
+			copy_prim(	c, q,
+					&scene_cl->p_prim[i],
+					&scene->p_prim[i],
 					scene_cl, scene);
 		}
 
-		clunmap(c, q, scene_cl->p_sph_light);
+		clunmap(c, q, scene_cl->p_prim);
 	}
+
+	{
+		scene_cl->n_bih = scene->n_bih;
+		scene_cl->p_bih =
+			clmalloc(c, q, sizeof(bih_cl_t) * scene->n_bih);
+
+		for (int i = 0; i < scene->n_bih; i++)
+		{
+			copy_bih(	c, q,
+					&scene_cl->p_bih[i],
+					&scene->p_bih[i],
+					scene_cl, scene);
+		}
+
+		clunmap(c, q, scene_cl->p_bih);
+	}
+
+	copy_box(c, q, &scene_cl->box, &scene->box, scene_cl, scene);
 }
 
 void *cldata_create_scene(	cl_context c, cl_command_queue q,
@@ -253,5 +332,5 @@ void *cldata_create_scene(	cl_context c, cl_command_queue q,
 void cldata_set_kernel_bufs(cl_kernel k)
 {
 	clSetKernelExecInfo(	k, CL_KERNEL_EXEC_INFO_SVM_PTRS,
-				sizeof(void *) * n_bufs, p_bufs);
+				sizeof*(p_bufs) * n_bufs, p_bufs);
 }

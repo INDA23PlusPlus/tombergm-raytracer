@@ -3,9 +3,9 @@
 
 #include "vec.h"
 
-typedef struct mat_struct	mat_t;
-typedef struct ray_struct	ray_t;
-typedef struct sph_struct	sph_t;
+typedef __constant struct mat_struct	mat_t;
+typedef struct ray_struct		ray_t;
+typedef __constant struct sph_struct	sph_t;
 
 struct sph_struct
 {
@@ -15,10 +15,8 @@ struct sph_struct
 	const mat_t *	mat;
 };
 
-static inline
-void	sph_trace(sph_t *sph, ray_t *ray);
-static inline
-void	ray_sph_light(	sph_t *sph, vec3_t *c, vec3_t *p,
-			vec3_t *d, real_t *dist);
+real_t	sph_trace(	const sph_t *sph, vec3_t *p, vec3_t *d,
+			real_t m, __constant void *prev);
+void	sph_hit(const sph_t *sph, ray_t *ray);
 
 #endif

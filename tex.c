@@ -13,7 +13,6 @@ int tex_load_c(tex_t *tex, const char *filename)
 
 	tex->c = stbi_load(filename, &tex->w, &tex->h, &n, 3);
 
-#if 1
 	/* Gamma correction */
 	if (tex->c != NULL)
 	{
@@ -21,8 +20,9 @@ int tex_load_c(tex_t *tex, const char *filename)
 		{
 			for (int x = 0; x < tex->w; x++)
 			{
-				int i = (y * tex->w + x) * 3;
-				unsigned char *p = &tex->c[i];
+				unsigned char *p = tex->c;
+
+				p = &p[(y * tex->w + x) * 3];
 
 				p[0] = 0.5 + pow(p[0] / 255., 2.2) * 255.;
 				p[1] = 0.5 + pow(p[1] / 255., 2.2) * 255.;
@@ -30,7 +30,6 @@ int tex_load_c(tex_t *tex, const char *filename)
 			}
 		}
 	}
-#endif
 
 	return tex->c != NULL;
 }
@@ -77,10 +76,9 @@ void tex_dstr(tex_t *tex)
 	}
 }
 
-static void load_sample(unsigned char *buf, int w, int h, int x, int y,
-			vec3_t *s)
+static void load_sample(void *buf, int w, int h, int x, int y, vec3_t *s)
 {
-	int i;
+	unsigned char *p = buf;
 
 	if (x < 0) x = w + x % w;
 	if (y < 0) y = h + y % h;
@@ -88,23 +86,21 @@ static void load_sample(unsigned char *buf, int w, int h, int x, int y,
 	x = x % w;
 	y = y % h;
 
-	i = ((h - 1 - y) * w + x) * 3;
+	p = &p[((h - 1 - y) * w + x) * 3];
 
-	s->x = buf[i + 0] / 255.f;
-	s->y = buf[i + 1] / 255.f;
-	s->z = buf[i + 2] / 255.f;
+	s->x = p[0] / 255.f;
+	s->y = p[1] / 255.f;
+	s->z = p[2] / 255.f;
 }
 
 __attribute__((unused))
-static void nearest(unsigned char *buf, int w, int h, const vec2_t *uv,
-			vec3_t *s)
+static void nearest(void *buf, int w, int h, const vec2_t *uv, vec3_t *s)
 {
 	load_sample(buf, w, h, uv->x * (w - 1), uv->y * (h - 1), s);
 }
 
 __attribute__((unused))
-static void bilerp(unsigned char *buf, int w, int h, const vec2_t *uv,
-			vec3_t *s)
+static void bilerp(void *buf, int w, int h, const vec2_t *uv, vec3_t *s)
 {
 	real_t	fx	= uv->x * (w - 1);
 	real_t	fy	= uv->y * (h - 1);

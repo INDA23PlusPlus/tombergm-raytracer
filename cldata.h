@@ -2,11 +2,18 @@
 #define CLDATA_H
 
 #include <CL/opencl.h>
-#include "scene.h"
 
-typedef cl_float	real_cl_t;
-typedef cl_float2	vec2_cl_t;
-typedef cl_float3	vec3_cl_t;
+typedef struct scene_struct	scene_t;
+
+typedef cl_float		real_cl_t;
+typedef cl_float2		vec2_cl_t;
+typedef cl_float3		vec3_cl_t;
+
+typedef struct
+{
+	real_cl_t		min[3];
+	real_cl_t		max[3];
+} box_cl_t;
 
 typedef struct
 {
@@ -24,9 +31,9 @@ typedef struct
 {
 	cl_int			w;
 	cl_int			h;
-	unsigned char *		c;
-	unsigned char *		n;
-	unsigned char *		r;
+	void *			c;
+	void *			n;
+	void *			r;
 } tex_cl_t;
 
 typedef struct
@@ -82,6 +89,22 @@ typedef struct
 
 typedef struct
 {
+	cl_int			type;
+	void *			ptr;
+} prim_cl_t;
+
+typedef struct
+{
+	cl_int			val;
+	union
+	{
+		real_cl_t	clip[2];
+		cl_int		num;
+	};
+} bih_cl_t;
+
+typedef struct
+{
 	cl_int			n_tex;
 	tex_cl_t *		p_tex;
 	cl_int			n_mat;
@@ -90,8 +113,11 @@ typedef struct
 	tri_cl_t *		p_tri;
 	cl_int			n_sph;
 	sph_cl_t *		p_sph;
-	cl_int			n_sph_light;
-	sph_cl_t *		p_sph_light;
+	cl_int			n_prim;
+	prim_cl_t *		p_prim;
+	cl_int			n_bih;
+	bih_cl_t *		p_bih;
+	box_cl_t		box;
 } scene_cl_t;
 
 void *cldata_create_scene(	cl_context c, cl_command_queue q,

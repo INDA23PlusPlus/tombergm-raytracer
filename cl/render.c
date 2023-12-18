@@ -5,11 +5,8 @@
 #include "vec.h"
 
 __kernel
-void render(	__global unsigned char *pb,
-		__global vec3_t *sb,
-		__constant cam_t *cam,
-		__constant scene_t *scene,
-		int sn, unsigned rand)
+void render(	__global unsigned char *pb, __global vec3_t *sb,
+		cam_t *cam, scene_t *scene, int sn, unsigned rand)
 {
 	int	w	= get_global_size(0);
 	int	h	= get_global_size(1);
@@ -53,16 +50,8 @@ void render(	__global unsigned char *pb,
 			}
 			else
 			{
-				real_t m = sn;
-
-#if 1
 				*s = *s + c;
-				c = *s / m;
-#else
-				*s = (*s * (m - 1) + c) / m;
-
-				c = *s;
-#endif
+				c = *s / sn;
 			}
 		}
 

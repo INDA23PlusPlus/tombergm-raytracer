@@ -1,52 +1,28 @@
+#include "mat.h"
 #include "tri.h"
 #include "ray.h"
 #include "vec.h"
 
-static inline void uvmap(tri_t *tri, vec3_t *q, vec2_t *uv)
-{
-	vec3_t	p;
-	vec3_t	i;
-	vec3_t	j;
-	vec2_t	st;
-
-	p = *q - tri->a;
-
-	i = cross(p, tri->iw);
-	j = cross(p, tri->jw);
-
-	st.x = sqrt(dot(j, j) * tri->td);
-	st.y = sqrt(dot(i, i) * tri->td);
-
-	*uv = tri->at + st.x * tri->iv;
-	*uv = *uv + st.y * tri->jv;
-}
-
-static inline void tri_trace(tri_t *tri, ray_t *ray)
+real_t tri_trace(	const tri_t *tri, vec3_t *p, vec3_t *d,
+			real_t m, __constant void *prev)
 {
 	vec3_t	q;
-	real_t	s;
-	real_t	t;
+	real_t	l;
 
-	if (ray->prev == tri)
+	if (tri == prev)
 	{
-		return;
+		return INFINITY;
 	}
 
-	s = dot(tri->a, tri->n);
-	t = (s - dot(ray->p, tri->n)) / dot(ray->d, tri->n);
+	l = dot(tri->a, tri->n) - dot(*p, tri->n);
+	l = l / dot(*d, tri->n);
 
-	if (t <= 0)
+	if (0 >= l || l >= m)
 	{
-		/* Surface is behind ray origin */
-		return;
-	}
-	else if (t >= ray->l)
-	{
-		/* Surface is occluded */
-		return;
+		return INFINITY;
 	}
 
-	q = ray->p + t * ray->d;
+	q = *p + l * *d;
 
 	{
 		real_t	x	= dot(q, tri->i);
@@ -66,24 +42,42 @@ static inline void tri_trace(tri_t *tri, ray_t *ray)
 		if (l_1 < 0 || l_2 < 0 || l_3 < 0)
 		{
 			/* Intersection lies outside triangle */
-			return;
+			return INFINITY;
 		}
 	}
 
+	return l;
+}
+
+static void tri_map(const tri_t *tri, vec3_t *q, vec2_t *uv)
+{
+	vec3_t	p;
+	vec3_t	i;
+	vec3_t	j;
+	vec2_t	st;
+
+	p = *q - tri->a;
+
+	i = cross(p, tri->iw);
+	j = cross(p, tri->jw);
+
+	st.x = sqrt(dot(j, j) * tri->td);
+	st.y = sqrt(dot(i, i) * tri->td);
+
+	*uv = tri->at + st.x * tri->iv + st.y * tri->jv;
+}
+
+void tri_hit(const tri_t *tri, ray_t *ray)
+{
+	ray->n = tri->n;
+
+	ray->mat = tri->mat;
+
+	if (mat_has_tex(ray->mat))
 	{
-		ray->curr = tri;
+		tri_map(tri, &ray->q, &ray->uv);
 
-		ray->q = q;
-		ray->n = tri->n;
-		ray->l = t;
-
-		ray->mat = tri->mat;
-		if (mat_has_tex(ray->mat))
-		{
-			uvmap(tri, &ray->q, &ray->uv);
-
-			ray->tu = tri->tu;
-			ray->tv = tri->tv;
-		}
+		ray->tu = tri->tu;
+		ray->tv = tri->tv;
 	}
 }

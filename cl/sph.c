@@ -1,124 +1,70 @@
+#include "mat.h"
 #include "sph.h"
 #include "ray.h"
 #include "vec.h"
 
-static inline
-void sph_trace(sph_t *sph, ray_t *ray)
+real_t sph_trace(	const sph_t *sph, vec3_t *p, vec3_t *d,
+			real_t m, __constant void *prev)
 {
 	vec3_t o;
 	vec3_t v;
 	vec3_t w;
-	real_t s;
-	real_t t;
+	real_t h;
+	real_t l;
 	real_t a;
 
-	o = sph->c - ray->p;
-	s = dot(o, ray->d);
+	o = sph->c - *p;
+	l = dot(o, *d);
 
-	if (s >= ray->l)
+	if (l <= 0)
 	{
-		/* Sphere is occluded */
-		return;
+		/* Ray is moving away */
+		return INFINITY;
 	}
 
-	if (s <= 0)
-	{
-		/* Ray moving away */
-		return;
-	}
-
-	v = s * ray->d;
+	v = l * *d;
 	w = v - o;
-	t = length(w);
+	h = length(w);
 
-	if (t > sph->r)
+	if (h > sph->r)
 	{
 		/* Ray intersection is outside sphere radius */
-		return;
+		return INFINITY;
 	}
 
-	a = 1 - (sph->r - t) / sph->r;
+	a = 1 - (sph->r - h) / sph->r;
 	a = sqrt(1 - a * a);
 
-	if (ray->prev == sph)
+	if (sph == prev)
 	{
 		/* Hit the back surface with transmission rays */
-		s = s + sph->r * a;
+		l = l + sph->r * a;
 	}
 	else
 	{
 		/* Otherwise hit the front surface */
-		s = s - sph->r * a;
+		l = l - sph->r * a;
 	}
 
-	if (s <= 0)
+	if (0 >= l || l >= m)
 	{
-		/* Sphere is behind ray origin */
-		return;
+		return INFINITY;
 	}
 
-	{
-		ray->curr = sph;
-
-		ray->q = ray->p + s * ray->d;
-		ray->n = ray->q - sph->c;
-		ray->n = ray->n / sph->r;
-		ray->l = s;
-
-		ray->mat = sph->mat;
-		if (mat_has_tex(ray->mat))
-		{
-			ray->uv.x = 0.5 + asin(ray->n.x) / M_PI;
-			ray->uv.y = 0.5 + asin(ray->n.z) / M_PI;
-		}
-	}
+	return l;
 }
 
-static inline
-void ray_sph_light(	sph_t *sph, vec3_t *c, vec3_t *p, vec3_t *d,
-			real_t *dist)
+void sph_hit(const sph_t *sph, ray_t *ray)
 {
-	vec3_t o;
-	vec3_t v;
-	vec3_t w;
-	real_t s;
-	real_t t;
-	real_t a;
+	ray->n = ray->q - sph->c;
+	ray->n = ray->n / sph->r;
 
-	o = sph->c - *p;
-	s = dot(o, *d);
+	ray->mat = sph->mat;
 
-	if (s >= *dist)
+	if (mat_has_tex(ray->mat))
 	{
-		/* Sphere is occluded */
-		return;
+		ray->uv.x = 0.5 + asin(ray->n.x) / M_PI;
+		ray->uv.y = 0.5 + asin(ray->n.z) / M_PI;
 	}
 
-	v = s * *d;
-	w = v - o;
-	t = length(w);
-
-	if (t > sph->r)
-	{
-		/* Ray intersection is outside sphere radius */
-		return;
-	}
-
-	a = 1 - (sph->r - t) / sph->r;
-	a = sqrt(1 - a * a);
-	s = s - sph->r * a;
-
-	if (s <= 0)
-	{
-		/* Sphere is behind ray origin */
-		return;
-	}
-
-	{
-		real_t m = 50;
-
-		a = m * 2 * a * a * sph->r;
-
-		*c = *c + a;
-	}
 }

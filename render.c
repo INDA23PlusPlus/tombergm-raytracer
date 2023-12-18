@@ -2,6 +2,7 @@
 #include <tgmath.h>
 #include <pthread.h>
 #include "cam.h"
+#include "scene.h"
 #include "ray.h"
 #include "render.h"
 #include "rt.h"
@@ -12,7 +13,7 @@
 #define TASK_CANCEL	-2
 
 static int rt_work(	int task_num, int task_max,
-			cam_t *cam, vp_t *vp,
+			scene_t *scene, cam_t *cam, vp_t *vp,
 			unsigned char *pb, vec3_t *sb, int sn)
 {
 	vec3_t	p	= cam->p;
@@ -55,7 +56,7 @@ static int rt_work(	int task_num, int task_max,
 			vec3_fma(&d, &d, fs, &fv);
 			vec3_norm(&d, &d);
 
-			ray_trace(&c, &p, &d, NULL);
+			ray_trace(scene, &c, &p, &d, NULL);
 
 			if (sn != 0)
 			{
@@ -67,26 +68,15 @@ static int rt_work(	int task_num, int task_max,
 				}
 				else
 				{
-					real_t m = sn;
-
-#if 1
 					vec3_add(s, s, &c);
-					vec3_scale(&c, 1 / m, s);
-#else
-					vec3_scale(s, (m - 1) / m, s);
-					vec3_fma(s, s, 1 / m, &c);
-
-					c = *s;
-#endif
+					vec3_scale(&c, (real_t) 1 / sn, s);
 				}
 			}
 
-#if 1
 			/* Gamma correction */
 			c.x = pow(c.x, 1. / 2.2);
 			c.y = pow(c.y, 1. / 2.2);
 			c.z = pow(c.z, 1. / 2.2);
-#endif
 
 			vec3_clamp(&c, &c, &vec3_zero, &vec3_unit);
 
@@ -118,7 +108,7 @@ static void *rt_func(void *arg)
 		}
 
 		rt_work(rt->task_num, rt->task_max,
-			rt->cam, rt->vp, rt->pb, rt->sb, rt->sn);
+			rt->scene, rt->cam, rt->vp, rt->pb, rt->sb, rt->sn);
 
 		pthread_mutex_lock(&rt->mtx);
 		{
@@ -149,7 +139,7 @@ int render_task_init(render_task_t *rt_list, int rt_num)
 }
 
 void render_task_commit(render_task_t *rt_list, int rt_num,
-			cam_t *cam, vp_t *vp,
+			scene_t *scene, cam_t *cam, vp_t *vp,
 			unsigned char *pb, vec3_t *sb, int sn)
 {
 	for (int i = 0; i < rt_num; i++)
@@ -161,6 +151,7 @@ void render_task_commit(render_task_t *rt_list, int rt_num,
 			rt->task_num = i;
 			rt->task_max = rt_num;
 
+			rt->scene = scene;
 			rt->cam = cam;
 			rt->vp = vp;
 			rt->pb = pb;
@@ -209,7 +200,8 @@ void render_task_dstr(render_task_t *rt_list, int rt_num)
 	}
 }
 
-int render(cam_t *cam, vp_t *vp, unsigned char *pb, vec3_t *sb, int sn)
+int render(	scene_t *scene, cam_t *cam, vp_t *vp,
+		unsigned char *pb, vec3_t *sb, int sn)
 {
-	return rt_work(0, 1, cam, vp, pb, sb, sn);
+	return rt_work(0, 1, scene, cam, vp, pb, sb, sn);
 }

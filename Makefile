@@ -1,18 +1,19 @@
 PROG		= rt
 SRCDIR		= ./
-SRC		= cldata.c clrender.c main.c ray.c render.c scene.c sph.c stb_image.c tex.c tri.c vec.c
-CLSRCDIR	= ./cl/
-CLSRC		= main.c ray.c render.c sph.c tex.c tri.c vec.c
+SRC		= bih.c box.c cldata.c clrender.c main.c prim.c ray.c render.c scene.c sph.c stb_image.c tex.c tri.c vec.c vector.c
 OBJDIR		= ./obj/
 CPPFLAGS	= -DCL_TARGET_OPENCL_VERSION=200
+CFLAGS		=
+LDFLAGS		=
+
 ifeq ($(DEBUG),1)
 CPPFLAGS	+= -DDEBUG
 CFLAGS		+= -Og -g -Wall
 else
 CPPFLAGS	+=
-CFLAGS		+= -O2 -g -Wall
+CFLAGS		+= -Ofast -flto=auto -fuse-linker-plugin -Wall
 endif
-LDFLAGS		=
+
 ifeq ($(shell uname -s | grep -o _NT-),_NT-)
 LDLIBS		= -lfreeglut -lopengl32 -lglew32 -lOpenCL
 else
@@ -30,24 +31,23 @@ clean:
 	rm -rf $(OBJDIR)
 	rm -f $(PROG)
 
-$(OBJDIR)render.cl.h: $(CLSRC:%=$(CLSRCDIR)%) | $(OBJDIR)
-	cat $(^) >$(@)
-
-$(OBJDIR)render.cl.c: $(OBJDIR)render.cl.h | $(OBJDIR)
-	$(CPP) -I$(CLSRCDIR) -MMD -MP -MT $(@) -MF $(@:%=%.d) $(<) | \
-	sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/g' -e 's/$$/\\n"/g' >$(@)
-
--include $(OBJDIR)render.cl.c.d
-
-$(OBJDIR)clrender.o: $(OBJDIR)render.cl.c
-
 $(OBJDIR):
 	mkdir -p $(@)
 
-$(OBJ): $(OBJDIR)%.o: $(SRCDIR)%.c | $(OBJDIR)
-	$(CC) -c -o $(@) -MMD -MP -MF $(@:%=%.d) $(CPPFLAGS) $(CFLAGS) $(<)
+-include $(OBJDIR)cl.c.d
+
+$(OBJDIR)cl.c: ./cl/main.c | $(OBJDIR)
+	$(CPP) -o $(@) -MMD -MP -MT $(@) -MF $(@:%=%.d) $(CPPFLAGS) $(<)
+
+$(OBJDIR)cl.c.inc: $(OBJDIR)cl.c | $(OBJDIR)
+	sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/g' -e 's/$$/\\n"/g' $(<) >$(@)
+
+$(OBJDIR)clrender.o: $(OBJDIR)cl.c.inc
 
 -include $(DEP)
+
+$(OBJ): $(OBJDIR)%.o: $(SRCDIR)%.c | $(OBJDIR)
+	$(CC) -c -o $(@) -MMD -MP -MF $(@:%=%.d) $(CPPFLAGS) $(CFLAGS) $(<)
 
 $(PROG): $(OBJ)
 	$(CC) -o $(@) $(CFLAGS) $(LDFLAGS) $(^) $(LDLIBS)

@@ -9,7 +9,7 @@ static cl_context	ctxt;
 static cl_command_queue	queue;
 static cl_program	prog;
 static cl_kernel	kern;
-static cl_event		event;
+static cl_event		event[3];
 
 static int		buf_w;
 static int		buf_h;
@@ -25,19 +25,16 @@ static cl_mem		mem_scene;
 
 static const char *	src =
 {
-#include "obj/render.cl.c"
+#include "obj/cl.c.inc"
 };
 
-int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
+int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 {
 	cl_platform_id		plat[1];
 	cl_context_properties	prop[3];
-  	cl_uint			nplat;
+	cl_uint			nplat	= 0;
 	cl_device_id		dev[1];
-	cl_uint			ndev;
-
-	buf_w = vp->w;
-	buf_h = vp->h;
+	cl_uint			ndev	= 0;
 
 	clGetPlatformIDs(1, plat, &nplat);
 
@@ -48,14 +45,19 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 
 	clGetDeviceIDs(plat[0], CL_DEVICE_TYPE_GPU, 1, dev, &ndev);
 
-	if (nplat == 0)
+	if (ndev == 0)
 	{
-		return -1;
+		clGetDeviceIDs(plat[0], CL_DEVICE_TYPE_CPU, 1, dev, &ndev);
+
+		if (ndev == 0)
+		{
+			return -1;
+		}
 	}
 
 	{
-		char n[64];
-		char v[64];
+		char n[256];
+		char v[256];
 
 		clGetDeviceInfo(dev[0], CL_DEVICE_NAME,
 				sizeof(n), n, NULL);
@@ -69,11 +71,10 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 	prop[1] = (cl_context_properties) plat[0];
 	prop[2] = 0;
 
-	ctxt = clCreateContextFromType(	prop, CL_DEVICE_TYPE_GPU, NULL,
-					NULL, NULL);
+	ctxt = clCreateContext(prop, 1, dev, NULL, NULL, NULL);
 	queue = clCreateCommandQueueWithProperties(ctxt, dev[0], NULL, NULL);
-
 	prog = clCreateProgramWithSource(ctxt, 1, &src, NULL, NULL);
+
 	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
 	{
 		char log[1024 * 16];
@@ -87,7 +88,11 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 			fprintf(stderr, "OpenCL build log:\n%s", log);
 		}
 	}
+
 	kern = clCreateKernel(prog, "render", NULL);
+
+	buf_w = vp->w;
+	buf_h = vp->h;
 
 	scene_cl = cldata_create_scene(ctxt, queue, scene);
 	cldata_set_kernel_bufs(kern);
@@ -115,7 +120,7 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 	return 0;
 }
 
-void clrender_commit(	cam_t *cam, vp_t *vp,
+void clrender_commit(	scene_t *scene, cam_t *cam, vp_t *vp,
 			unsigned char *pb, vec3_t *sb,
 			int sn)
 {
@@ -142,8 +147,7 @@ void clrender_commit(	cam_t *cam, vp_t *vp,
 
 		clEnqueueUnmapMemObject(queue,
 					mem_cam, &cam_cl,
-					0, NULL,
-					&event);
+					0, NULL, &event[0]);
 	}
 
 	{
@@ -160,19 +164,19 @@ void clrender_commit(	cam_t *cam, vp_t *vp,
 
 	{
 		size_t gw[2] = { buf_w, buf_h };
-		size_t lw[2] = { 1, 1 };
 
-		clEnqueueNDRangeKernel(	queue, kern, 2, NULL,
-					gw, lw, 1, &event, &event);
+		clEnqueueNDRangeKernel(	queue, kern,
+					2, NULL, gw, NULL,
+					1, &event[0], &event[1]);
 
 		clEnqueueMapBuffer(	queue, mem_pb, CL_FALSE,
 					CL_MAP_READ,
 					0, buf_w * buf_h * 4,
-					1, &event, &event, NULL);
+					1, &event[1], &event[2], NULL);
 	}
 }
 
 void clrender_wait(void)
 {
-	clFinish(queue);
+	clWaitForEvents(1, &event[2]);
 }

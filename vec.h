@@ -1,14 +1,47 @@
 #ifndef VEC_H
 #define VEC_H
 
-typedef double	real_t;
+typedef float			real_t;
+typedef struct vec2_struct	vec2_t;
+typedef struct vec3_struct	vec3_t;
 
-typedef struct
+#define min2(a, b)	fmin(a, b)
+#define min3(a, b, c)	min2(min2(a, b), c)
+#define max2(a, b)	fmax(a, b)
+#define max3(a, b, c)	max2(a, max2(b, c))
+
+struct vec2_struct
+{
+	real_t	x;
+	real_t	y;
+};
+
+extern const vec2_t vec2_zero;
+extern const vec2_t vec2_unit;
+
+void	vec2_set(vec2_t *r, const vec2_t *a);
+void	vec2_add(vec2_t *r, const vec2_t *a, const vec2_t *b);
+void	vec2_sub(vec2_t *r, const vec2_t *a, const vec2_t *b);
+void	vec2_clamp(vec2_t *r, const vec2_t *a,
+			const vec2_t *lo, const vec2_t *hi);
+void	vec2_scale(vec2_t *r, real_t s, const vec2_t *a);
+void	vec2_fma(vec2_t *r, const vec2_t *a, real_t s, const vec2_t *b);
+void	vec2_nmul(vec2_t *r, const vec2_t *a, const vec2_t *b);
+real_t	vec2_len(const vec2_t *a);
+real_t	vec2_len_sq(const vec2_t *a);
+void	vec2_norm(vec2_t *r, const vec2_t *a);
+real_t	vec2_dot(const vec2_t *a, const vec2_t *b);
+real_t	vec2_cos(const vec2_t *a, const vec2_t *b);
+real_t	vec2_proj_s(const vec2_t *a, const vec2_t *b);
+void	vec2_proj_v(vec2_t *r, const vec2_t *a, const vec2_t *b);
+void	vec2_rej_v(vec2_t *r, const vec2_t *a, const vec2_t *b);
+
+struct vec3_struct
 {
 	real_t	x;
 	real_t	y;
 	real_t	z;
-} vec3_t;
+};
 
 extern const vec3_t vec3_zero;
 extern const vec3_t vec3_unit;
@@ -31,32 +64,6 @@ void	vec3_proj_v(vec3_t *r, const vec3_t *a, const vec3_t *b);
 void	vec3_rej_v(vec3_t *r, const vec3_t *a, const vec3_t *b);
 void	vec3_cross(vec3_t *r, const vec3_t *a, const vec3_t *b);
 void	vec3_diffuse(vec3_t *r, const vec3_t *n, real_t a);
-
-typedef struct
-{
-	real_t	x;
-	real_t	y;
-} vec2_t;
-
-extern const vec2_t vec2_zero;
-extern const vec2_t vec2_unit;
-
-void	vec2_set(vec2_t *r, const vec2_t *a);
-void	vec2_add(vec2_t *r, const vec2_t *a, const vec2_t *b);
-void	vec2_sub(vec2_t *r, const vec2_t *a, const vec2_t *b);
-void	vec2_clamp(vec2_t *r, const vec2_t *a,
-			const vec2_t *lo, const vec2_t *hi);
-void	vec2_scale(vec2_t *r, real_t s, const vec2_t *a);
-void	vec2_fma(vec2_t *r, const vec2_t *a, real_t s, const vec2_t *b);
-void	vec2_nmul(vec2_t *r, const vec2_t *a, const vec2_t *b);
-real_t	vec2_len(const vec2_t *a);
-real_t	vec2_len_sq(const vec2_t *a);
-void	vec2_norm(vec2_t *r, const vec2_t *a);
-real_t	vec2_dot(const vec2_t *a, const vec2_t *b);
-real_t	vec2_cos(const vec2_t *a, const vec2_t *b);
-real_t	vec2_proj_s(const vec2_t *a, const vec2_t *b);
-void	vec2_proj_v(vec2_t *r, const vec2_t *a, const vec2_t *b);
-void	vec2_rej_v(vec2_t *r, const vec2_t *a, const vec2_t *b);
 
 extern unsigned rng_val;
 

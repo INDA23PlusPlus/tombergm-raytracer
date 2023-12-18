@@ -1,6 +1,93 @@
 #include <tgmath.h>
 #include "vec.h"
 
+const vec2_t vec2_zero = { 0, 0 };
+const vec2_t vec2_unit = { 1, 1 };
+
+void vec2_set(vec2_t *r, const vec2_t *a)
+{
+	*r = *a;
+}
+
+void vec2_add(vec2_t *r, const vec2_t *a, const vec2_t *b)
+{
+	r->x = a->x + b->x;
+	r->y = a->y + b->y;
+}
+
+void vec2_sub(vec2_t *r, const vec2_t *a, const vec2_t *b)
+{
+	r->x = a->x - b->x;
+	r->y = a->y - b->y;
+}
+
+void vec2_clamp(vec2_t *r, const vec2_t *a, const vec2_t *lo, const vec2_t *hi)
+{
+	r->x = (a->x > lo->x ? a->x < hi->x ? a->x : hi->x : lo->x);
+	r->y = (a->y > lo->y ? a->y < hi->y ? a->y : hi->y : lo->y);
+}
+
+void vec2_scale(vec2_t *r, real_t s, const vec2_t *a)
+{
+	r->x = s * a->x;
+	r->y = s * a->y;
+}
+
+void vec2_fma(vec2_t *r, const vec2_t *a, real_t s, const vec2_t *b)
+{
+	r->x = a->x + s * b->x;
+	r->y = a->y + s * b->y;
+}
+
+void vec2_nmul(vec2_t *r, const vec2_t *a, const vec2_t *b)
+{
+	r->x = a->x * b->x;
+	r->y = a->y * b->y;
+}
+
+real_t vec2_len(const vec2_t *a)
+{
+	return sqrt(vec2_len_sq(a));
+}
+
+real_t vec2_len_sq(const vec2_t *a)
+{
+	return vec2_dot(a, a);
+}
+
+void vec2_norm(vec2_t *r, const vec2_t *a)
+{
+	vec2_scale(r, 1 / vec2_len(a), a);
+}
+
+real_t vec2_dot(const vec2_t *a, const vec2_t *b)
+{
+	return a->x * b->x + a->y * b->y;
+}
+
+real_t vec2_cos(const vec2_t *a, const vec2_t *b)
+{
+	return vec2_dot(a, b) / (vec2_len(a) * vec2_len(b));
+}
+
+real_t vec2_proj_s(const vec2_t *a, const vec2_t *b)
+{
+	return vec2_dot(a, b) / vec2_len(b);
+}
+
+void vec2_proj_v(vec2_t *r, const vec2_t *a, const vec2_t *b)
+{
+	vec2_scale(r, vec2_dot(a, b) / vec2_len_sq(b), b);
+}
+
+void vec2_rej_v(vec2_t *r, const vec2_t *a, const vec2_t *b)
+{
+	vec2_t v;
+
+	vec2_proj_v(&v, a, b);
+	vec2_sub(r, a, &v);
+}
+
 const vec3_t vec3_zero = { 0, 0, 0 };
 const vec3_t vec3_unit = { 1, 1, 1 };
 
@@ -131,93 +218,6 @@ void vec3_diffuse(vec3_t *r, const vec3_t *n, real_t a)
 
 	vec3_scale(r, cos(a), n);
 	vec3_fma(r, r, sin(a), &m);
-}
-
-const vec2_t vec2_zero = { 0, 0 };
-const vec2_t vec2_unit = { 1, 1 };
-
-void vec2_set(vec2_t *r, const vec2_t *a)
-{
-	*r = *a;
-}
-
-void vec2_add(vec2_t *r, const vec2_t *a, const vec2_t *b)
-{
-	r->x = a->x + b->x;
-	r->y = a->y + b->y;
-}
-
-void vec2_sub(vec2_t *r, const vec2_t *a, const vec2_t *b)
-{
-	r->x = a->x - b->x;
-	r->y = a->y - b->y;
-}
-
-void vec2_clamp(vec2_t *r, const vec2_t *a, const vec2_t *lo, const vec2_t *hi)
-{
-	r->x = (a->x > lo->x ? a->x < hi->x ? a->x : hi->x : lo->x);
-	r->y = (a->y > lo->y ? a->y < hi->y ? a->y : hi->y : lo->y);
-}
-
-void vec2_scale(vec2_t *r, real_t s, const vec2_t *a)
-{
-	r->x = s * a->x;
-	r->y = s * a->y;
-}
-
-void vec2_fma(vec2_t *r, const vec2_t *a, real_t s, const vec2_t *b)
-{
-	r->x = a->x + s * b->x;
-	r->y = a->y + s * b->y;
-}
-
-void vec2_nmul(vec2_t *r, const vec2_t *a, const vec2_t *b)
-{
-	r->x = a->x * b->x;
-	r->y = a->y * b->y;
-}
-
-real_t vec2_len(const vec2_t *a)
-{
-	return sqrt(vec2_len_sq(a));
-}
-
-real_t vec2_len_sq(const vec2_t *a)
-{
-	return vec2_dot(a, a);
-}
-
-void vec2_norm(vec2_t *r, const vec2_t *a)
-{
-	vec2_scale(r, 1 / vec2_len(a), a);
-}
-
-real_t vec2_dot(const vec2_t *a, const vec2_t *b)
-{
-	return a->x * b->x + a->y * b->y;
-}
-
-real_t vec2_cos(const vec2_t *a, const vec2_t *b)
-{
-	return vec2_dot(a, b) / (vec2_len(a) * vec2_len(b));
-}
-
-real_t vec2_proj_s(const vec2_t *a, const vec2_t *b)
-{
-	return vec2_dot(a, b) / vec2_len(b);
-}
-
-void vec2_proj_v(vec2_t *r, const vec2_t *a, const vec2_t *b)
-{
-	vec2_scale(r, vec2_dot(a, b) / vec2_len_sq(b), b);
-}
-
-void vec2_rej_v(vec2_t *r, const vec2_t *a, const vec2_t *b)
-{
-	vec2_t v;
-
-	vec2_proj_v(&v, a, b);
-	vec2_sub(r, a, &v);
 }
 
 unsigned rng_val;

@@ -1,46 +1,35 @@
+#include "bih.h"
 #include "mat.h"
+#include "prim.h"
 #include "ray.h"
 #include "scene.h"
-#include "sph.h"
 #include "tex.h"
-#include "tri.h"
 #include "vec.h"
 
 #define RAY_DEPTH 8
 
-static inline
-void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
-			unsigned *rand)
+static void ray_trace_f0(	scene_t *scene, ray_t *ray,
+				ray_t *rec, unsigned *rand)
 {
 	float n_cos;
 	float n_sin_sq;
 
-	ray->d		= normalize(ray->d);
-	ray->curr	= NULL;
-	ray->l		= 1. / 0.;
-	ray->mat	= NULL;
-	ray->c		= 0;
+	ray->d = normalize(ray->d);
+	ray->l = INFINITY;
 
-	for (int i = 0; i < scene->n_tri; i++)
+	ray->curr = bih_trace(scene, &ray->p, &ray->d, &ray->l, ray->prev);
+
+	if (ray->curr == NULL)
 	{
-		tri_t *tri = &scene->p_tri[i];
-
-		tri_trace(tri, ray);
-	}
-
-	for (int i = 0; i < scene->n_sph; i++)
-	{
-		sph_t *sph = &scene->p_sph[i];
-
-		sph_trace(sph, ray);
-	}
-
-	if (ray->mat == NULL || rec == NULL)
-	{
-		/* No recursive rays */
+		/* Nothing hit */
 		return;
 	}
 
+	ray->q = ray->p + ray->l * ray->d;
+
+	prim_hit(ray->curr, ray);
+
+	ray->c = 0;
 	ray->tc = 1;
 	ray->tr = 1;
 
@@ -62,8 +51,9 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 
 	ray->tc = ray->tc * ray->mat->col;
 
-	if ((ray->mat->flg & MAT_FLAT) != 0)
+	if ((ray->mat->flg & MAT_FLAT) != 0 || rec == NULL)
 	{
+		/* No recursive rays */
 		return;
 	}
 
@@ -75,9 +65,13 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 	float R;
 
 	if (n_cos < 0)
+	{
 		ind = ray->mat->ind;
+	}
 	else
+	{
 		ind = 1. / ray->mat->ind;
+	}
 
 	{
 		/* Fresnel equation for non-magnetic reflectivity */
@@ -86,7 +80,7 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 		if (b < 0)
 		{
 			/* Total internal reflection */
-			R = 1.0 / 0.0;
+			R = INFINITY;
 			ref_rc = 1;
 		}
 		else
@@ -128,8 +122,7 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 	}
 }
 
-static inline
-void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
+static void ray_shade_f0(scene_t *scene, ray_t *ray, ray_t *rec)
 {
 	const mat_t *mat = ray->mat;
 
@@ -140,6 +133,11 @@ void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
 	}
 
 	/* Ambient */
+	if ((mat->flg & MAT_FLAT) == 0)
+	{
+		ray->c = ray->c + mat->amb * fabs(dot(ray->d, ray->n));
+	}
+	else
 	{
 		ray->c = ray->c + mat->amb;
 	}
@@ -167,13 +165,6 @@ void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
 	}
 #endif
 
-	for (int i = 0; i < scene->n_sph_light; i++)
-	{
-		sph_t *sph = &scene->p_sph_light[i];
-
-		ray_sph_light(sph, &ray->c, &ray->p, &ray->d, &ray->l);
-	}
-
 #if 0
 	/* Attenuation */
 	if ((mat->flg & MAT_FLAT) == 0)
@@ -192,8 +183,7 @@ void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
 #endif
 }
 
-static inline
-void ray_trace(	__constant scene_t *scene,
+void ray_trace(	scene_t *scene,
 		vec3_t *c, vec3_t *p, vec3_t *d,
 		unsigned *rand)
 {
@@ -207,9 +197,9 @@ void ray_trace(	__constant scene_t *scene,
 		rays[i].prev = NULL;
 	}
 
-	rays[0].prev = &rays[0];
-	rays[0].p = *p;
-	rays[0].d = *d;
+	rays[0].prev	= scene->p_prim - 1;
+	rays[0].p	= *p;
+	rays[0].d	= *d;
 
 	i = 0;
 	j = 1;
@@ -251,5 +241,8 @@ void ray_trace(	__constant scene_t *scene,
 	}
 	while (i > 0);
 
-	*c = rays[0].c;
+	if (rays[0].curr != NULL)
+	{
+		*c = rays[0].c;
+	}
 }

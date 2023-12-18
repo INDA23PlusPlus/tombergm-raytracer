@@ -23,6 +23,8 @@
 #define WIDTH	800
 #define HEIGHT	600
 
+extern scene_t		scene;
+
 #ifdef RT_CL
 static int		use_cl = 1;
 #else
@@ -153,7 +155,7 @@ static void display_func(void)
 	static struct timespec	disp_time;
 	static struct timespec	rate_time;
 	static int		rate_frame;
-	static long		rate_ns;
+	static long		rate_ms;
 	static float		fps;
 
 	struct timespec now;
@@ -161,23 +163,23 @@ static void display_func(void)
 
 	if (time_set)
 	{
-		long dd	= 	(now.tv_sec - disp_time.tv_sec) * 1000000000l
-				+ now.tv_nsec - disp_time.tv_nsec;
-		long rd	= 	(now.tv_sec - rate_time.tv_sec) * 1000000000l
-				+ now.tv_nsec - rate_time.tv_nsec;
+		long dd	= 	(now.tv_sec - disp_time.tv_sec) * 1000000l
+				+ (now.tv_nsec - disp_time.tv_nsec) / 1000l;
+		long rd	= 	(now.tv_sec - rate_time.tv_sec) * 1000000l
+				+ (now.tv_nsec - rate_time.tv_nsec) / 1000l;
 
 		disp_time = now;
 
 		rate_frame++;
-		rate_ns = rate_ns + dd;
+		rate_ms = rate_ms + dd;
 
-		if (rd >= 1000000000l)
+		if (rd >= 1000000l)
 		{
-			fps = rate_frame * (1000000000.f / rate_ns);
+			fps = rate_frame * (1000000.f / rate_ms);
 
 			rate_time = now;
 			rate_frame = 0;
-			rate_ns = 0;
+			rate_ms = 0;
 		}
 	}
 	else
@@ -188,22 +190,20 @@ static void display_func(void)
 		time_set = 1;
 	}
 
-	update();
-
 	if (use_cl)
 	{
-		clrender_commit(&cam, &vp, pb, sb, sn);
 		clrender_wait();
 	}
 	else if (N_THRD != 0)
 	{
-		render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
 		render_task_wait(rt_list, N_THRD);
 	}
 	else
 	{
-		render(&cam, &vp, pb, sb, sn);
+		render(&scene, &cam, &vp, pb, sb, sn);
 	}
+
+	update();
 
 	{
 		glBindTexture(GL_TEXTURE_2D, tex);
@@ -223,19 +223,31 @@ static void display_func(void)
 		glutPostRedisplay();
 	}
 
+	if (use_cl)
+	{
+		clrender_commit(&scene, &cam, &vp, pb, sb, sn);
+	}
+	else if (N_THRD != 0)
+	{
+		render_task_commit(	rt_list, N_THRD, &scene, &cam, &vp,
+					pb, sb, sn);
+	}
+
 	{
 		char t[64];
 
 		if (sn == 0)
 		{
-			sprintf(t, "FPS: %.2f    Samples: %i\n", fps, 1);
+			sprintf(t, "FPS: %.2f    Samples: %i", fps, 1);
 		}
 		else
 		{
-			sprintf(t, "FPS: %.2f    Samples: %i\n", fps, sn);
+			sprintf(t, "FPS: %.2f    Samples: %i", fps, sn);
 		}
 
 		glutSetWindowTitle(t);
+
+		fprintf(stderr, "%s\r", t);
 	}
 
 	if (sn != 0)
@@ -301,7 +313,7 @@ int main(int argc, char *argv[])
 
 	cam.p.x		= 0;
 	cam.p.y		= 0;
-	cam.p.z 	= 0;
+	cam.p.z 	= -1;
 	cam.uv.x	= 0;
 	cam.uv.y	= 1;
 	cam.uv.z	= 0;
@@ -317,11 +329,11 @@ int main(int argc, char *argv[])
 	vp.w		= WIDTH;
 	vp.h		= HEIGHT;
 
-	scene_init();
+	scene_init(&scene);
 
 	if (use_cl)
 	{
-		if (clrender_init(pb, &vp, &scene) != 0)
+		if (clrender_init(&scene, pb, &vp) != 0)
 		{
 			use_cl = 0;
 
@@ -344,6 +356,16 @@ int main(int argc, char *argv[])
 			fprintf(stderr,
 				"Using single-threaded CPU rendering\n");
 		}
+	}
+
+	if (use_cl)
+	{
+		clrender_commit(&scene, &cam, &vp, pb, sb, sn);
+	}
+	else if (N_THRD != 0)
+	{
+		render_task_commit(	rt_list, N_THRD, &scene, &cam, &vp,
+					pb, sb, sn);
 	}
 
 	{
@@ -372,10 +394,19 @@ int main(int argc, char *argv[])
 		glutMainLoop();
 	}
 
+	if (use_cl)
+	{
+		clrender_wait();
+	}
+	else if (N_THRD != 0)
+	{
+		render_task_wait(rt_list, N_THRD);
+	}
+
 	if (!use_cl && N_THRD != 0)
 	{
 		render_task_dstr(rt_list, N_THRD);
 	}
 
-	scene_dstr();
+	scene_dstr(&scene);
 }

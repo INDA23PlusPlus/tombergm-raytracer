@@ -1,4 +1,6 @@
 #include <tgmath.h>
+#include "box.h"
+#include "mat.h"
 #include "tri.h"
 #include "ray.h"
 #include "vec.h"
@@ -96,51 +98,36 @@ void tri_precomp(tri_t *tri)
 	tri->tv	= tv;
 }
 
-static void uvmap(tri_t *tri, vec3_t *q, vec2_t *uv)
+void tri_get_box(const tri_t *tri, box_t *box)
 {
-	vec3_t	p;
-	vec3_t	i;
-	vec3_t	j;
-	vec2_t	st;
-
-	vec3_sub(&p, q, &tri->a);
-
-	vec3_cross(&i, &p, &tri->iw);
-	vec3_cross(&j, &p, &tri->jw);
-
-	st.x = sqrt(vec3_len_sq(&j) * tri->td);
-	st.y = sqrt(vec3_len_sq(&i) * tri->td);
-
-	vec2_fma(uv, &tri->at, st.x, &tri->iv);
-	vec2_fma(uv, uv, st.y, &tri->jv);
+	box->min[0] = min3(tri->a.x, tri->b.x, tri->c.x);
+	box->max[0] = max3(tri->a.x, tri->b.x, tri->c.x);
+	box->min[1] = min3(tri->a.y, tri->b.y, tri->c.y);
+	box->max[1] = max3(tri->a.y, tri->b.y, tri->c.y);
+	box->min[2] = min3(tri->a.z, tri->b.z, tri->c.z);
+	box->max[2] = max3(tri->a.z, tri->b.z, tri->c.z);
 }
 
-int tri_trace(tri_t* tri, ray_t *ray)
+real_t tri_trace(	const tri_t *tri, vec3_t *p, vec3_t *d,
+			real_t m, void *prev)
 {
 	vec3_t	q;
-	real_t	s;
-	real_t	t;
+	real_t	l;
 
-	if (ray->prev == tri)
+	if (tri == prev)
 	{
-		return 0;
+		return INFINITY;
 	}
 
-	s = vec3_dot(&tri->a, &tri->n);
-	t = (s - vec3_dot(&ray->p, &tri->n)) / vec3_dot(&ray->d, &tri->n);
+	l = vec3_dot(&tri->a, &tri->n) - vec3_dot(p, &tri->n);
+	l = l / vec3_dot(d, &tri->n);
 
-	if (t <= 0)
+	if (0 >= l || l >= m)
 	{
-		/* Surface is behind ray origin */
-		return 0;
-	}
-	else if (t >= ray->l)
-	{
-		/* Surface is occluded */
-		return 0;
+		return INFINITY;
 	}
 
-	vec3_fma(&q, &ray->p, t, &ray->d);
+	vec3_fma(&q, p, l, d);
 
 	{
 		real_t	x	= vec3_dot(&q, &tri->i);
@@ -160,26 +147,43 @@ int tri_trace(tri_t* tri, ray_t *ray)
 		if (l_1 < 0 || l_2 < 0 || l_3 < 0)
 		{
 			/* Intersection lies outside triangle */
-			return 0;
+			return INFINITY;
 		}
 	}
 
+	return l;
+}
+
+static void tri_map(const tri_t *tri, vec3_t *q, vec2_t *uv)
+{
+	vec3_t	p;
+	vec3_t	i;
+	vec3_t	j;
+	vec2_t	st;
+
+	vec3_sub(&p, q, &tri->a);
+
+	vec3_cross(&i, &p, &tri->iw);
+	vec3_cross(&j, &p, &tri->jw);
+
+	st.x = sqrt(vec3_len_sq(&j) * tri->td);
+	st.y = sqrt(vec3_len_sq(&i) * tri->td);
+
+	vec2_fma(uv, &tri->at, st.x, &tri->iv);
+	vec2_fma(uv, uv, st.y, &tri->jv);
+}
+
+void tri_hit(const tri_t *tri, ray_t *ray)
+{
+	vec3_set(&ray->n, &tri->n);
+
+	ray->mat = tri->mat;
+
+	if (mat_has_tex(ray->mat))
 	{
-		ray->curr = tri;
+		tri_map(tri, &ray->q, &ray->uv);
 
-		vec3_set(&ray->q, &q);
-		vec3_set(&ray->n, &tri->n);
-		ray->l = t;
-
-		ray->mat = tri->mat;
-		if (mat_has_tex(ray->mat))
-		{
-			uvmap(tri, &ray->q, &ray->uv);
-
-			ray->tu = tri->tu;
-			ray->tv = tri->tv;
-		}
-
-		return 1;
+		ray->tu = tri->tu;
+		ray->tv = tri->tv;
 	}
 }

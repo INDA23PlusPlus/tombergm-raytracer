@@ -1,13 +1,21 @@
-#include <stddef.h>
+#include "bih.h"
 #include "mat.h"
+#include "prim.h"
 #include "scene.h"
 #include "sph.h"
+#include "tex.h"
 #include "tri.h"
 
 static tex_t tex[] =
 {
-	{},
-	{},
+	{
+		.c = "./res/Daylight Box UV.png",
+	},
+	{
+		.c = "./res/wood_0018_color_4k.jpg",
+		.n = "./res/wood_0018_normal_opengl_4k.jpg",
+		.r = "./res/wood_0018_roughness_4k.jpg",
+	},
 };
 
 static mat_t mat[] =
@@ -21,6 +29,14 @@ static mat_t mat[] =
 		.tra	= 0.00,
 		.ind	= 1.00,
 		.flg	= MAT_FLAT,
+	},
+	{
+		.col	= { 1.0, 1.0, 1.0 },
+		.dif	= 0.00,
+		.amb	= 100.,
+		.ref	= 0.00,
+		.tra	= 1.00,
+		.ind	= 1.00,
 	},
 	{
 		.tex	= &tex[1],
@@ -41,7 +57,7 @@ static mat_t mat[] =
 	},
 	{
 		.col	= { 0.4, 0.4, 0.4 },
-		.dif	= 0.40,
+		.dif	= 0.20,
 		.amb	= 0.00,
 		.ref	= 0.80,
 		.tra	= 0.00,
@@ -183,7 +199,7 @@ static tri_t tri[] =
 		{ -10,  -1,  10 },
 		{  10,  -1,  10 },
 		{  10,  -1, -10 },
-		&mat[1],
+		&mat[2],
 		{ 0.0, 4.0 },
 		{ 4.0, 4.0 },
 		{ 4.0, 0.0 },
@@ -192,7 +208,7 @@ static tri_t tri[] =
 		{ -10,  -1,  10 },
 		{  10,  -1, -10 },
 		{ -10,  -1, -10 },
-		&mat[1],
+		&mat[2],
 		{ 0.0, 4.0 },
 		{ 4.0, 0.0 },
 		{ 0.0, 0.0 },
@@ -204,36 +220,36 @@ static tri_t tri[] =
 		{ -1, -1,  2 },
 		{  0,  1,  2 },
 		{  1, -1,  2 },
-		&mat[2],
+		&mat[3],
 		{ 0.0, 0.0 },
 		{ 0.5, 1.0 },
 		{ 1.0, 0.0 },
 	},
 #endif
+
+#include "mdl.c"
 };
 
 static sph_t sph[] =
 {
 #if 1
 	{
+		{ -2.0,  7.0, -2.0 },
+		1.0,
+		&mat[1],
+	},
+#endif
+
+#if 1
+	{
 		{  0.00, -0.50,  3.00 },
 		0.50,
-		&mat[3],
+		&mat[4],
 	},
 	{
 		{  2.00, -0.25,  1.00 },
 		0.75,
-		&mat[4],
-	}
-#endif
-};
-
-static sph_t sph_light[] =
-{
-#if 1
-	{
-		{ -2.0,  7.0, -2.0 },
-		1.0,
+		&mat[5],
 	}
 #endif
 };
@@ -248,27 +264,45 @@ scene_t scene =
 	.p_tri		= tri,
 	.n_sph		= sizeof(sph) / sizeof*(sph),
 	.p_sph		= sph,
-	.n_sph_light	= sizeof(sph_light) / sizeof*(sph_light),
-	.p_sph_light	= sph_light,
 };
 
-void scene_init(void)
+void scene_init(scene_t *scene)
 {
-	tex_load_c(&tex[0], "./res/Daylight Box UV.png");
-	tex_load_c(&tex[1], "./res/wood_0018_color_4k.jpg");
-	tex_load_n(&tex[1], "./res/wood_0018_normal_opengl_4k.jpg");
-	tex_load_r(&tex[1], "./res/wood_0018_roughness_4k.jpg");
-
-	for (int i = 0; i < scene.n_tri; i++)
+	for (int i = 0; i < scene->n_tex; i++)
 	{
-		tri_t *tri = &scene.p_tri[i];
+		tex_t *tex = &scene->p_tex[i];
+
+		if (tex->c != NULL)
+		{
+			tex_load_c(tex, tex->c);
+		}
+
+		if (tex->n != NULL)
+		{
+			tex_load_n(tex, tex->n);
+		}
+
+		if (tex->r != NULL)
+		{
+			tex_load_r(tex, tex->r);
+		}
+	}
+
+	for (int i = 0; i < scene->n_tri; i++)
+	{
+		tri_t *tri = &scene->p_tri[i];
 
 		tri_precomp(tri);
 	}
+
+	prim_build(scene);
+	bih_build(scene);
 }
 
-
-void scene_dstr(void)
+void scene_dstr(scene_t *scene)
 {
-	tex_dstr(&tex[0]);
+	for (int i = 0; i < scene->n_tex; i++)
+	{
+		tex_dstr(&scene->p_tex[i]);
+	}
 }

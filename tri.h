@@ -1,11 +1,14 @@
 #ifndef TRI_H
 #define TRI_H
 
-#include "mat.h"
-#include "ray.h"
 #include "vec.h"
 
-typedef struct
+typedef struct box_struct	box_t;
+typedef struct mat_struct	mat_t;
+typedef struct ray_struct	ray_t;
+typedef struct tri_struct	tri_t;
+
+struct tri_struct
 {
 	vec3_t		a;
 	vec3_t		b;
@@ -35,9 +38,12 @@ typedef struct
 		vec3_t	tu;	/* Normalized texture world-space u-vector */
 		vec3_t	tv;	/* Normalized texture world-space v-vector */
 	};
-} tri_t;
+};
 
 void	tri_precomp(tri_t *tri);
-int	tri_trace(tri_t* tri, ray_t *ray);
+void	tri_get_box(const tri_t *tri, box_t *box);
+real_t	tri_trace(	const tri_t *tri, vec3_t *p, vec3_t *d,
+			real_t m, void *prev);
+void	tri_hit(const tri_t *tri, ray_t *ray);
 
 #endif

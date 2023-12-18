@@ -1,6 +1,5 @@
 #include "vec.h"
 
-static inline
 void vec3_diffuse(vec3_t *r, const vec3_t *n, real_t a, unsigned *rand)
 {
 	vec3_t m;

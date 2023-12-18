@@ -5,8 +5,8 @@
 
 #define MAT_FLAT	1
 
-typedef struct tex_struct	tex_t;
-typedef struct mat_struct	mat_t;
+typedef __constant struct tex_struct	tex_t;
+typedef __constant struct mat_struct	mat_t;
 
 struct mat_struct
 {

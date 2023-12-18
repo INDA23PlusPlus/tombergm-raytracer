@@ -3,15 +3,16 @@
 
 #include "vec.h"
 
-typedef struct mat_struct	mat_t;
-typedef struct scene_struct	scene_t;
-typedef struct ray_struct	ray_t;
+typedef __constant struct mat_struct	mat_t;
+typedef __constant struct prim_struct	prim_t;
+typedef struct ray_struct		ray_t;
+typedef __constant struct scene_struct	scene_t;
 
 struct ray_struct
 {
-	void *		prev;	/* Previous object */
-	void *		curr;	/* Current object */
-
+	prim_t *	prev;	/* Previous object */
+	prim_t *	curr;	/* Current object */
+	real_t		rc;	/* Recursive coefficient */
 	vec3_t		p;	/* Origin */
 	vec3_t		d;	/* Direction */
 	vec3_t		q;	/* Hit point */
@@ -24,12 +25,10 @@ struct ray_struct
 	vec3_t		tu;	/* World-space u-vector */
 	vec3_t		tv;	/* World-space v-vector */
 	vec3_t		c;	/* Value */
-	real_t		rc;	/* Recursive coefficient */
 };
 
-static inline
-void ray_trace(	__constant scene_t *scene,
-		vec3_t *c, vec3_t *p, vec3_t *d,
-		unsigned *rand);
+void	ray_trace(	scene_t *scene,
+			vec3_t *c, vec3_t *p, vec3_t *d,
+			unsigned *rand);
 
 #endif
