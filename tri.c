@@ -118,29 +118,29 @@ static void uvmap(tri_t *tri, vec3_t *q, vec2_t *uv)
 int tri_trace(tri_t* tri, ray_t *ray)
 {
 	vec3_t	q;
-	real_t	s;
-	real_t	t;
+	real_t	d;
+	real_t	l;
 
 	if (ray->prev == tri)
 	{
 		return 0;
 	}
 
-	s = vec3_dot(&tri->a, &tri->n);
-	t = (s - vec3_dot(&ray->p, &tri->n)) / vec3_dot(&ray->d, &tri->n);
+	d = vec3_dot(&tri->a, &tri->n);
+	l = (d - vec3_dot(&ray->p, &tri->n)) / vec3_dot(&ray->d, &tri->n);
 
-	if (t <= 0)
+	if (l <= 0)
 	{
 		/* Surface is behind ray origin */
 		return 0;
 	}
-	else if (t >= ray->l)
+	else if (l >= ray->l)
 	{
 		/* Surface is occluded */
 		return 0;
 	}
 
-	vec3_fma(&q, &ray->p, t, &ray->d);
+	vec3_fma(&q, &ray->p, l, &ray->d);
 
 	{
 		real_t	x	= vec3_dot(&q, &tri->i);
@@ -169,7 +169,7 @@ int tri_trace(tri_t* tri, ray_t *ray)
 
 		vec3_set(&ray->q, &q);
 		vec3_set(&ray->n, &tri->n);
-		ray->l = t;
+		ray->l = l;
 
 		ray->mat = tri->mat;
 		if (mat_has_tex(ray->mat))

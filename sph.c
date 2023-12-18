@@ -15,12 +15,6 @@ int sph_trace(sph_t *sph, ray_t *ray)
 	vec3_sub(&o, &sph->c, &ray->p);
 	s = vec3_dot(&o, &ray->d);
 
-	if (s >= ray->l)
-	{
-		/* Sphere is occluded */
-		return 0;
-	}
-
 	if (s <= 0)
 	{
 		/* Ray moving away */
@@ -54,6 +48,11 @@ int sph_trace(sph_t *sph, ray_t *ray)
 	if (s <= 0)
 	{
 		/* Sphere is behind ray origin */
+		return 0;
+	}
+	else if (s >= ray->l)
+	{
+		/* Sphere is occluded */
 		return 0;
 	}
 

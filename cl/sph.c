@@ -15,12 +15,6 @@ void sph_trace(sph_t *sph, ray_t *ray)
 	o = sph->c - ray->p;
 	s = dot(o, ray->d);
 
-	if (s >= ray->l)
-	{
-		/* Sphere is occluded */
-		return;
-	}
-
 	if (s <= 0)
 	{
 		/* Ray moving away */
@@ -54,6 +48,11 @@ void sph_trace(sph_t *sph, ray_t *ray)
 	if (s <= 0)
 	{
 		/* Sphere is behind ray origin */
+		return;
+	}
+	else if (s >= ray->l)
+	{
+		/* Sphere is occluded */
 		return;
 	}
 
