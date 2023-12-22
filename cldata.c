@@ -218,22 +218,6 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 
 		clunmap(c, q, scene_cl->p_sph);
 	}
-
-	{
-		scene_cl->n_sph_light = scene->n_sph_light;
-		scene_cl->p_sph_light =
-			clmalloc(c, q, sizeof(sph_cl_t) * scene->n_sph_light);
-
-		for (int i = 0; i < scene->n_sph_light; i++)
-		{
-			copy_sph(	c, q,
-					&scene_cl->p_sph_light[i],
-					&scene->p_sph_light[i],
-					scene_cl, scene);
-		}
-
-		clunmap(c, q, scene_cl->p_sph_light);
-	}
 }
 
 void *cldata_create_scene(	cl_context c, cl_command_queue q,

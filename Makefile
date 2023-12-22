@@ -1,6 +1,6 @@
 PROG		= rt
 SRCDIR		= ./
-SRC		= cldata.c clrender.c main.c ray.c render.c scene.c sph.c stb_image.c tex.c tri.c vec.c
+SRC		= bih.c cldata.c clrender.c main.c ray.c render.c scene.c sph.c stb_image.c tex.c tri.c vec.c
 CLSRCDIR	= ./cl/
 CLSRC		= main.c ray.c render.c sph.c tex.c tri.c vec.c
 OBJDIR		= ./obj/
@@ -10,7 +10,7 @@ CPPFLAGS	+= -DDEBUG
 CFLAGS		+= -Og -g -Wall
 else
 CPPFLAGS	+=
-CFLAGS		+= -O2 -g -Wall
+CFLAGS		+= -Ofast -flto -Wall
 endif
 LDFLAGS		=
 ifeq ($(shell uname -s | grep -o _NT-),_NT-)

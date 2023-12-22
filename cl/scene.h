@@ -17,8 +17,6 @@ struct scene_struct
 	tri_t *	p_tri;
 	int	n_sph;
 	sph_t *	p_sph;
-	int	n_sph_light;
-	sph_t *	p_sph_light;
 };
 
 #endif

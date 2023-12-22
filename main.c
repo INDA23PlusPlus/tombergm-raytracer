@@ -12,7 +12,7 @@
 #include "vec.h"
 #include "vp.h"
 
-#define RT_CL
+//#define RT_CL
 
 #ifndef DEBUG
 #define N_THRD	4
@@ -153,7 +153,7 @@ static void display_func(void)
 	static struct timespec	disp_time;
 	static struct timespec	rate_time;
 	static int		rate_frame;
-	static long		rate_ns;
+	static long		rate_us;
 	static float		fps;
 
 	struct timespec now;
@@ -161,23 +161,23 @@ static void display_func(void)
 
 	if (time_set)
 	{
-		long dd	= 	(now.tv_sec - disp_time.tv_sec) * 1000000000l
-				+ now.tv_nsec - disp_time.tv_nsec;
-		long rd	= 	(now.tv_sec - rate_time.tv_sec) * 1000000000l
-				+ now.tv_nsec - rate_time.tv_nsec;
+		long dd	= 	(now.tv_sec - disp_time.tv_sec) * 1000000l
+				+ (now.tv_nsec - disp_time.tv_nsec) / 1000l;
+		long rd	= 	(now.tv_sec - rate_time.tv_sec) * 1000000l
+				+ (now.tv_nsec - rate_time.tv_nsec) / 1000l;
 
 		disp_time = now;
 
 		rate_frame++;
-		rate_ns = rate_ns + dd;
+		rate_us = rate_us + dd;
 
-		if (rd >= 1000000000l)
+		if (rd >= 1000000l)
 		{
-			fps = rate_frame * (1000000000.f / rate_ns);
+			fps = rate_frame * (1000000.f / rate_us);
 
 			rate_time = now;
 			rate_frame = 0;
-			rate_ns = 0;
+			rate_us = 0;
 		}
 	}
 	else
@@ -188,22 +188,20 @@ static void display_func(void)
 		time_set = 1;
 	}
 
-	update();
-
 	if (use_cl)
 	{
-		clrender_commit(&cam, &vp, pb, sb, sn);
 		clrender_wait();
 	}
 	else if (N_THRD != 0)
 	{
-		render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
 		render_task_wait(rt_list, N_THRD);
 	}
 	else
 	{
 		render(&cam, &vp, pb, sb, sn);
 	}
+
+	update();
 
 	{
 		glBindTexture(GL_TEXTURE_2D, tex);
@@ -221,6 +219,15 @@ static void display_func(void)
 
 		glutSwapBuffers();
 		glutPostRedisplay();
+	}
+
+	if (use_cl)
+	{
+		clrender_commit(&cam, &vp, pb, sb, sn);
+	}
+	else if (N_THRD != 0)
+	{
+		render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
 	}
 
 	{
@@ -295,13 +302,15 @@ static void special_up_func(int key, int x, int y)
 	keys[key] = 0;
 }
 
+void bih_build(const scene_t *scene);
+
 int main(int argc, char *argv[])
 {
 	real_t	aspect	= (real_t) WIDTH / (real_t) HEIGHT;
 
 	cam.p.x		= 0;
 	cam.p.y		= 0;
-	cam.p.z 	= 0;
+	cam.p.z 	= -1;
 	cam.uv.x	= 0;
 	cam.uv.y	= 1;
 	cam.uv.z	= 0;
@@ -318,6 +327,8 @@ int main(int argc, char *argv[])
 	vp.h		= HEIGHT;
 
 	scene_init();
+
+	bih_build(&scene);
 
 	if (use_cl)
 	{
@@ -346,6 +357,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (use_cl)
+	{
+		clrender_commit(&cam, &vp, pb, sb, sn);
+	}
+	else if (N_THRD != 0)
+	{
+		render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
+	}
+
 	{
 		glutInit(&argc, argv);
 
@@ -370,6 +390,15 @@ int main(int argc, char *argv[])
 		glutSpecialUpFunc(special_up_func);
 
 		glutMainLoop();
+	}
+
+	if (use_cl)
+	{
+		clrender_wait();
+	}
+	else if (N_THRD != 0)
+	{
+		render_task_wait(rt_list, N_THRD);
 	}
 
 	if (!use_cl && N_THRD != 0)

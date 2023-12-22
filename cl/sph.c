@@ -17,7 +17,7 @@ void sph_trace(sph_t *sph, ray_t *ray)
 
 	if (s <= 0)
 	{
-		/* Ray moving away */
+		/* Ray is moving away */
 		return;
 	}
 
@@ -70,54 +70,5 @@ void sph_trace(sph_t *sph, ray_t *ray)
 			ray->uv.x = 0.5 + asin(ray->n.x) / M_PI;
 			ray->uv.y = 0.5 + asin(ray->n.z) / M_PI;
 		}
-	}
-}
-
-static inline
-void ray_sph_light(	sph_t *sph, vec3_t *c, vec3_t *p, vec3_t *d,
-			real_t *dist)
-{
-	vec3_t o;
-	vec3_t v;
-	vec3_t w;
-	real_t s;
-	real_t t;
-	real_t a;
-
-	o = sph->c - *p;
-	s = dot(o, *d);
-
-	if (s >= *dist)
-	{
-		/* Sphere is occluded */
-		return;
-	}
-
-	v = s * *d;
-	w = v - o;
-	t = length(w);
-
-	if (t > sph->r)
-	{
-		/* Ray intersection is outside sphere radius */
-		return;
-	}
-
-	a = 1 - (sph->r - t) / sph->r;
-	a = sqrt(1 - a * a);
-	s = s - sph->r * a;
-
-	if (s <= 0)
-	{
-		/* Sphere is behind ray origin */
-		return;
-	}
-
-	{
-		real_t m = 50;
-
-		a = m * 2 * a * a * sph->r;
-
-		*c = *c + a;
 	}
 }

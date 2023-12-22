@@ -9,7 +9,7 @@
 #include "tri.h"
 #include "vec.h"
 
-#define RAY_DEPTH 4
+#define RAY_DEPTH 8
 
 void ray_shade(ray_t *ray)
 {
@@ -126,6 +126,11 @@ void ray_shade(ray_t *ray)
 	}
 
 	/* Ambient */
+	if ((mat->flg & MAT_FLAT) == 0)
+	{
+		vec3_fma(&ray->c, &ray->c, mat->amb * fabs(n_cos), &vec3_unit);
+	}
+	else
 	{
 		vec3_fma(&ray->c, &ray->c, mat->amb, &vec3_unit);
 	}
@@ -134,23 +139,10 @@ void ray_shade(ray_t *ray)
 	{
 		vec3_nmul(&ray->c, &ray->c, &tc);
 	}
-
-#if 0
-	/* Attenuation */
-	if ((mat->flg & MAT_FLAT) == 0)
-	{
-		real_t m = 100;
-		real_t a = m / vec3_len_sq(&r);
-
-		if (a > 1)
-		{
-			a = 1;
-		}
-
-		vec3_scale(&ray->c, a, &ray->c);
-	}
-#endif
 }
+
+void *bih_trace(vec3_t *p, vec3_t *d, real_t *m, void *u);
+void prim_hit(const void *prim, ray_t *ray);
 
 int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 {
@@ -177,6 +169,16 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 	vec3_set(&ray.d, d);
 	vec3_set(&ray.c, &vec3_zero);
 
+#if 1
+	ray.curr = bih_trace(p, d, &ray.l, ray.prev);
+
+	if (ray.curr != NULL)
+	{
+		vec3_fma(&ray.q, &ray.p, ray.l, &ray.d);
+
+		prim_hit(ray.curr, &ray);
+	}
+#else
 	for (int i = 0; i < scene.n_tri; i++)
 	{
 		tri_t *tri = &scene.p_tri[i];
@@ -190,13 +192,7 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 
 		sph_trace(sph, &ray);
 	}
-
-	for (int i = 0; i < scene.n_sph_light; i++)
-	{
-		sph_t *sph = &scene.p_sph_light[i];
-
-		ray_sph_light(sph, c, p, d, &ray.l, ray.depth + 1);
-	}
+#endif
 
 	if (ray.mat != NULL)
 	{

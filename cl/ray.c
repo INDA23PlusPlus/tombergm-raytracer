@@ -140,6 +140,11 @@ void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
 	}
 
 	/* Ambient */
+	if ((mat->flg & MAT_FLAT) == 0)
+	{
+		ray->c = ray->c + mat->amb * fabs(dot(ray->d, ray->n));
+	}
+	else
 	{
 		ray->c = ray->c + mat->amb;
 	}
@@ -166,13 +171,6 @@ void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
 		}
 	}
 #endif
-
-	for (int i = 0; i < scene->n_sph_light; i++)
-	{
-		sph_t *sph = &scene->p_sph_light[i];
-
-		ray_sph_light(sph, &ray->c, &ray->p, &ray->d, &ray->l);
-	}
 
 #if 0
 	/* Attenuation */

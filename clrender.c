@@ -36,9 +36,6 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 	cl_device_id		dev[1];
 	cl_uint			ndev;
 
-	buf_w = vp->w;
-	buf_h = vp->h;
-
 	clGetPlatformIDs(1, plat, &nplat);
 
 	if (nplat == 0)
@@ -48,9 +45,14 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 
 	clGetDeviceIDs(plat[0], CL_DEVICE_TYPE_GPU, 1, dev, &ndev);
 
-	if (nplat == 0)
+	if (ndev == 0)
 	{
-		return -1;
+		clGetDeviceIDs(plat[0], CL_DEVICE_TYPE_CPU, 1, dev, &ndev);
+
+		if (ndev == 0)
+		{
+			return -1;
+		}
 	}
 
 	{
@@ -69,11 +71,12 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 	prop[1] = (cl_context_properties) plat[0];
 	prop[2] = 0;
 
-	ctxt = clCreateContextFromType(	prop, CL_DEVICE_TYPE_GPU, NULL,
-					NULL, NULL);
+	ctxt = clCreateContext(prop, 1, dev, NULL, NULL, NULL);
+
 	queue = clCreateCommandQueueWithProperties(ctxt, dev[0], NULL, NULL);
 
 	prog = clCreateProgramWithSource(ctxt, 1, &src, NULL, NULL);
+
 	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
 	{
 		char log[1024 * 16];
@@ -87,7 +90,11 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 			fprintf(stderr, "OpenCL build log:\n%s", log);
 		}
 	}
+
 	kern = clCreateKernel(prog, "render", NULL);
+
+	buf_w = vp->w;
+	buf_h = vp->h;
 
 	scene_cl = cldata_create_scene(ctxt, queue, scene);
 	cldata_set_kernel_bufs(kern);

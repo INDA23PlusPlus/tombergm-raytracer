@@ -90,8 +90,6 @@ typedef struct
 	tri_cl_t *		p_tri;
 	cl_int			n_sph;
 	sph_cl_t *		p_sph;
-	cl_int			n_sph_light;
-	sph_cl_t *		p_sph_light;
 } scene_cl_t;
 
 void *cldata_create_scene(	cl_context c, cl_command_queue q,

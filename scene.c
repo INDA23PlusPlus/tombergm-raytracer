@@ -23,6 +23,14 @@ static mat_t mat[] =
 		.flg	= MAT_FLAT,
 	},
 	{
+		.col	= { 1.0, 1.0, 1.0 },
+		.dif	= 0.00,
+		.amb	= 100.,
+		.ref	= 0.00,
+		.tra	= 1.00,
+		.ind	= 1.00,
+	},
+	{
 		.tex	= &tex[1],
 		.col	= { 1.0, 1.0, 1.0 },
 		.dif	= 1.00,
@@ -183,7 +191,7 @@ static tri_t tri[] =
 		{ -10,  -1,  10 },
 		{  10,  -1,  10 },
 		{  10,  -1, -10 },
-		&mat[1],
+		&mat[2],
 		{ 0.0, 4.0 },
 		{ 4.0, 4.0 },
 		{ 4.0, 0.0 },
@@ -192,7 +200,7 @@ static tri_t tri[] =
 		{ -10,  -1,  10 },
 		{  10,  -1, -10 },
 		{ -10,  -1, -10 },
-		&mat[1],
+		&mat[2],
 		{ 0.0, 4.0 },
 		{ 4.0, 0.0 },
 		{ 0.0, 0.0 },
@@ -204,36 +212,36 @@ static tri_t tri[] =
 		{ -1, -1,  2 },
 		{  0,  1,  2 },
 		{  1, -1,  2 },
-		&mat[2],
+		&mat[3],
 		{ 0.0, 0.0 },
 		{ 0.5, 1.0 },
 		{ 1.0, 0.0 },
 	},
 #endif
+
+#include "mdl.c"
 };
 
 static sph_t sph[] =
 {
 #if 1
 	{
+		{ -2.0,  7.0, -2.0 },
+		1.0,
+		&mat[1],
+	},
+#endif
+
+#if 1
+	{
 		{  0.00, -0.50,  3.00 },
 		0.50,
-		&mat[3],
+		&mat[4],
 	},
 	{
 		{  2.00, -0.25,  1.00 },
 		0.75,
-		&mat[4],
-	}
-#endif
-};
-
-static sph_t sph_light[] =
-{
-#if 1
-	{
-		{ -2.0,  7.0, -2.0 },
-		1.0,
+		&mat[5],
 	}
 #endif
 };
@@ -248,8 +256,6 @@ scene_t scene =
 	.p_tri		= tri,
 	.n_sph		= sizeof(sph) / sizeof*(sph),
 	.p_sph		= sph,
-	.n_sph_light	= sizeof(sph_light) / sizeof*(sph_light),
-	.p_sph_light	= sph_light,
 };
 
 void scene_init(void)
