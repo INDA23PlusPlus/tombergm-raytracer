@@ -3,6 +3,11 @@
 
 typedef double	real_t;
 
+#define min2(a, b)	fmin(a, b)
+#define min3(a, b, c)	min2(min2(a, b), c)
+#define max2(a, b)	fmax(a, b)
+#define max3(a, b, c)	max2(a, max2(b, c))
+
 typedef struct
 {
 	real_t	x;

@@ -1,12 +1,12 @@
 #include <stddef.h>
 #include <tgmath.h>
+#include "bih.h"
 #include "mat.h"
+#include "prim.h"
 #include "ray.h"
 #include "rt.h"
 #include "scene.h"
-#include "sph.h"
 #include "tex.h"
-#include "tri.h"
 #include "vec.h"
 
 #define RAY_DEPTH 8
@@ -59,7 +59,7 @@ void ray_shade(ray_t *ray)
 		if (b < 0)
 		{
 			/* Total internal reflection */
-			R = 1.0 / 0.0;
+			R = INFINITY;
 			ref_rc = 1;
 		}
 		else
@@ -141,9 +141,6 @@ void ray_shade(ray_t *ray)
 	}
 }
 
-void *bih_trace(vec3_t *p, vec3_t *d, real_t *m, void *u);
-void prim_hit(const void *prim, ray_t *ray);
-
 int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 {
 	ray_t ray;
@@ -151,7 +148,7 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 	ray.prev	= NULL;
 	ray.curr	= NULL;
 	ray.depth	= 0;
-	ray.l		= 1. / 0.;
+	ray.l		= INFINITY;
 	ray.mat		= NULL;
 
 	if (src != NULL)
@@ -169,8 +166,7 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 	vec3_set(&ray.d, d);
 	vec3_set(&ray.c, &vec3_zero);
 
-#if 1
-	ray.curr = bih_trace(p, d, &ray.l, ray.prev);
+	ray.curr = bih_trace(&scene, p, d, &ray.l, ray.prev);
 
 	if (ray.curr != NULL)
 	{
@@ -178,21 +174,6 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 
 		prim_hit(ray.curr, &ray);
 	}
-#else
-	for (int i = 0; i < scene.n_tri; i++)
-	{
-		tri_t *tri = &scene.p_tri[i];
-
-		tri_trace(tri, &ray);
-	}
-
-	for (int i = 0; i < scene.n_sph; i++)
-	{
-		sph_t *sph = &scene.p_sph[i];
-
-		sph_trace(sph, &ray);
-	}
-#endif
 
 	if (ray.mat != NULL)
 	{

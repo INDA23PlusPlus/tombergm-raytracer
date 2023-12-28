@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
+#include "bih.h"
 #include "cam.h"
 #include "clrender.h"
 #include "render.h"
@@ -235,14 +236,16 @@ static void display_func(void)
 
 		if (sn == 0)
 		{
-			sprintf(t, "FPS: %.2f    Samples: %i\n", fps, 1);
+			sprintf(t, "FPS: %.2f    Samples: %i", fps, 1);
 		}
 		else
 		{
-			sprintf(t, "FPS: %.2f    Samples: %i\n", fps, sn);
+			sprintf(t, "FPS: %.2f    Samples: %i", fps, sn);
 		}
 
 		glutSetWindowTitle(t);
+
+		fprintf(stderr, "%s\r", t);
 	}
 
 	if (sn != 0)
@@ -301,8 +304,6 @@ static void special_up_func(int key, int x, int y)
 {
 	keys[key] = 0;
 }
-
-void bih_build(const scene_t *scene);
 
 int main(int argc, char *argv[])
 {

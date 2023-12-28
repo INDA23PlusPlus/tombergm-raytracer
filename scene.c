@@ -1,4 +1,3 @@
-#include <stddef.h>
 #include "mat.h"
 #include "scene.h"
 #include "sph.h"
@@ -219,7 +218,7 @@ static tri_t tri[] =
 	},
 #endif
 
-#include "mdl.c"
+//#include "mdl.c"
 };
 
 static sph_t sph[] =

@@ -1,18 +1,21 @@
 PROG		= rt
 SRCDIR		= ./
-SRC		= bih.c cldata.c clrender.c main.c ray.c render.c scene.c sph.c stb_image.c tex.c tri.c vec.c
+SRC		= bih.c box.c cldata.c clrender.c main.c prim.c ray.c render.c scene.c sph.c stb_image.c tex.c tri.c vec.c vector.c
 CLSRCDIR	= ./cl/
 CLSRC		= main.c ray.c render.c sph.c tex.c tri.c vec.c
 OBJDIR		= ./obj/
 CPPFLAGS	= -DCL_TARGET_OPENCL_VERSION=200
+CLFAGS		=
+LDFLAGS		=
+
 ifeq ($(DEBUG),1)
 CPPFLAGS	+= -DDEBUG
 CFLAGS		+= -Og -g -Wall
 else
 CPPFLAGS	+=
-CFLAGS		+= -Ofast -flto -Wall
+CFLAGS		+= -Ofast -flto=auto -fuse-linker-plugin -Wall
 endif
-LDFLAGS		=
+
 ifeq ($(shell uname -s | grep -o _NT-),_NT-)
 LDLIBS		= -lfreeglut -lopengl32 -lglew32 -lOpenCL
 else

@@ -1,6 +1,7 @@
 #ifndef TRI_H
 #define TRI_H
 
+#include "box.h"
 #include "mat.h"
 #include "ray.h"
 #include "vec.h"
@@ -38,6 +39,9 @@ typedef struct
 } tri_t;
 
 void	tri_precomp(tri_t *tri);
-int	tri_trace(tri_t* tri, ray_t *ray);
+void	tri_get_box(const tri_t *tri, box_t *box);
+real_t	tri_trace(	const tri_t *tri, vec3_t *p, vec3_t *d,
+			real_t m, void *prev);
+void	tri_hit(const tri_t *tri, ray_t *ray);
 
 #endif

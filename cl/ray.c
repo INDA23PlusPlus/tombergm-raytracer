@@ -35,9 +35,9 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 		sph_trace(sph, ray);
 	}
 
-	if (ray->mat == NULL || rec == NULL)
+	if (ray->mat == NULL)
 	{
-		/* No recursive rays */
+		/* Nothing hit */
 		return;
 	}
 
@@ -62,8 +62,9 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 
 	ray->tc = ray->tc * ray->mat->col;
 
-	if ((ray->mat->flg & MAT_FLAT) != 0)
+	if ((ray->mat->flg & MAT_FLAT) != 0 || rec == NULL)
 	{
+		/* No recursive rays */
 		return;
 	}
 

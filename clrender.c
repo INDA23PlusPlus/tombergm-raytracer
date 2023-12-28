@@ -9,7 +9,7 @@ static cl_context	ctxt;
 static cl_command_queue	queue;
 static cl_program	prog;
 static cl_kernel	kern;
-static cl_event		event;
+static cl_event		event[3];
 
 static int		buf_w;
 static int		buf_h;
@@ -56,8 +56,8 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 	}
 
 	{
-		char n[64];
-		char v[64];
+		char n[256];
+		char v[256];
 
 		clGetDeviceInfo(dev[0], CL_DEVICE_NAME,
 				sizeof(n), n, NULL);
@@ -149,8 +149,7 @@ void clrender_commit(	cam_t *cam, vp_t *vp,
 
 		clEnqueueUnmapMemObject(queue,
 					mem_cam, &cam_cl,
-					0, NULL,
-					&event);
+					0, NULL, &event[0]);
 	}
 
 	{
@@ -170,16 +169,16 @@ void clrender_commit(	cam_t *cam, vp_t *vp,
 		size_t lw[2] = { 1, 1 };
 
 		clEnqueueNDRangeKernel(	queue, kern, 2, NULL,
-					gw, lw, 1, &event, &event);
+					gw, lw, 1, &event[0], &event[1]);
 
 		clEnqueueMapBuffer(	queue, mem_pb, CL_FALSE,
 					CL_MAP_READ,
 					0, buf_w * buf_h * 4,
-					1, &event, &event, NULL);
+					1, &event[1], &event[2], NULL);
 	}
 }
 
 void clrender_wait(void)
 {
-	clFinish(queue);
+	clWaitForEvents(1, &event[2]);
 }
