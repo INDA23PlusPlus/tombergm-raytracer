@@ -15,7 +15,10 @@ struct sph_struct
 	const mat_t *	mat;
 };
 
-static inline
 void	sph_trace(sph_t *sph, ray_t *ray);
+
+real_t	sph_trace2(	const sph_t *sph, vec3_t *p, vec3_t *d,
+			real_t m, void *prev);
+void	sph_hit(const sph_t *sph, ray_t *ray);
 
 #endif

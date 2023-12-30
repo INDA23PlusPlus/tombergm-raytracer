@@ -1,4 +1,6 @@
+#include "bih.h"
 #include "mat.h"
+#include "prim.h"
 #include "ray.h"
 #include "scene.h"
 #include "sph.h"
@@ -8,16 +10,15 @@
 
 #define RAY_DEPTH 8
 
-static inline
-void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
-			unsigned *rand)
+static void ray_trace_f0(	__constant scene_t *scene, ray_t *ray,
+				ray_t *rec, unsigned *rand)
 {
 	float n_cos;
 	float n_sin_sq;
 
 	ray->d		= normalize(ray->d);
 	ray->curr	= NULL;
-	ray->l		= 1. / 0.;
+	ray->l		= INFINITY;
 	ray->mat	= NULL;
 	ray->c		= 0;
 
@@ -87,7 +88,7 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 		if (b < 0)
 		{
 			/* Total internal reflection */
-			R = 1.0 / 0.0;
+			R = INFINITY;
 			ref_rc = 1;
 		}
 		else
@@ -129,8 +130,118 @@ void ray_trace_f0(	__constant scene_t *scene, ray_t *ray, ray_t *rec,
 	}
 }
 
-static inline
-void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
+static void ray_trace_f1(	__constant scene_t *scene, ray_t *ray,
+				ray_t *rec, unsigned *rand)
+{
+	float n_cos;
+	float n_sin_sq;
+
+	ray->d		= normalize(ray->d);
+	ray->l		= INFINITY;
+	ray->mat	= NULL;
+	ray->c		= 0;
+
+	ray->curr = bih_trace(scene, &ray->p, &ray->d, &ray->l, ray->prev);
+
+	if (ray->curr == NULL)
+	{
+		/* Nothing hit */
+		return;
+	}
+
+	ray->q = ray->p + ray->l * ray->d;
+
+	prim_hit(ray->curr, ray);
+
+	ray->tc = 1;
+	ray->tr = 1;
+
+	if (mat_has_tex(ray->mat))
+	{
+		vec3_t tn;
+
+		tex_sample(	ray->mat->tex, &ray->uv,
+				&ray->tc, &tn, &ray->tr);
+
+		if (tex_has_n(ray->mat->tex))
+		{
+			ray->n = tn.z * ray->n;
+			ray->n = ray->n + tn.x * ray->tu;
+			ray->n = ray->n + tn.y * ray->tv;
+			ray->n = normalize(ray->n);
+		}
+	}
+
+	ray->tc = ray->tc * ray->mat->col;
+
+	if ((ray->mat->flg & MAT_FLAT) != 0 || rec == NULL)
+	{
+		/* No recursive rays */
+		return;
+	}
+
+	n_cos = dot(ray->d, ray->n);
+
+	float ref_rc = ray->mat->ref;
+	float tra_rc = ray->tr;
+	float ind;
+	float R;
+
+	if (n_cos < 0)
+		ind = ray->mat->ind;
+	else
+		ind = 1. / ray->mat->ind;
+
+	{
+		/* Fresnel equation for non-magnetic reflectivity */
+		float b = ind * ind + n_cos * n_cos - 1;
+
+		if (b < 0)
+		{
+			/* Total internal reflection */
+			R = INFINITY;
+			ref_rc = 1;
+		}
+		else
+		{
+			b = sqrt(b);
+			R = (fabs(n_cos) - b) / (fabs(n_cos) + b);
+			R = R * R;
+		}
+	}
+
+	if (flt_rand(rand) * ray->mat->tra <= R)
+	{
+		if (flt_rand(rand) * ray->tr < ray->mat->dif)
+		{
+			/* Diffuse reflection */
+			rec->prev = ray->curr;
+			rec->p = ray->q;
+			vec3_diffuse(&rec->d, &ray->n, M_PI / 2, rand);
+			ray->rc = ref_rc * fabs(dot(rec->d, ray->n)) * 2;
+		}
+		else
+		{
+			/* Specular reflection */
+			rec->prev = ray->curr;
+			rec->p = ray->q;
+			rec->d = ray->d - 2 * n_cos * ray->n;
+			ray->rc = ref_rc;
+		}
+	}
+	else
+	{
+		/* Transmission */
+		rec->prev = ray->curr;
+		rec->p = ray->q;
+		rec->d = (ray->d - n_cos * ray->n) / ind;
+		n_sin_sq = dot(rec->d, rec->d);
+		rec->d = rec->d + copysign(sqrt(1 - n_sin_sq), n_cos) * ray->n;
+		ray->rc = tra_rc;
+	}
+}
+
+static void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
 {
 	const mat_t *mat = ray->mat;
 
@@ -191,7 +302,6 @@ void ray_shade_f0(__constant scene_t *scene, ray_t *ray, ray_t *rec)
 #endif
 }
 
-static inline
 void ray_trace(	__constant scene_t *scene,
 		vec3_t *c, vec3_t *p, vec3_t *d,
 		unsigned *rand)
@@ -219,11 +329,11 @@ void ray_trace(	__constant scene_t *scene,
 		{
 			if (j < RAY_DEPTH)
 			{
-				ray_trace_f0(scene, &rays[i], &rays[j], rand);
+				ray_trace_f1(scene, &rays[i], &rays[j], rand);
 			}
 			else
 			{
-				ray_trace_f0(scene, &rays[i], NULL, rand);
+				ray_trace_f1(scene, &rays[i], NULL, rand);
 			}
 		}
 

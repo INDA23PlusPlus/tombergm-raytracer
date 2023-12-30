@@ -3,10 +3,9 @@
 
 #define BILERP
 
-static inline
-void load_sample(	unsigned char *buf,
-			int w, int h, int x, int y,
-			vec3_t *s)
+static void load_sample(	unsigned char *buf,
+				int w, int h, int x, int y,
+				vec3_t *s)
 {
 	int i;
 
@@ -24,19 +23,17 @@ void load_sample(	unsigned char *buf,
 }
 
 __attribute__((unused))
-static inline
-void nearest(	unsigned char *buf,
-		int w, int h, const vec2_t *uv,
-		vec3_t *s)
+static void nearest(	unsigned char *buf,
+			int w, int h, const vec2_t *uv,
+			vec3_t *s)
 {
 	load_sample(buf, w, h, uv->x * (w - 1), uv->y * (h - 1), s);
 }
 
 __attribute__((unused))
-static inline
-void bilerp(	unsigned char *buf,
-		int w, int h, const vec2_t *uv,
-		vec3_t *s)
+static void bilerp(	unsigned char *buf,
+			int w, int h, const vec2_t *uv,
+			vec3_t *s)
 {
 	real_t	fx	= uv->x * (w - 1);
 	real_t	fy	= uv->y * (h - 1);
@@ -63,7 +60,6 @@ void bilerp(	unsigned char *buf,
 	*s = s1[0] + fy * *s;
 }
 
-static inline
 void tex_sample(const tex_t *tex,
 		const vec2_t *uv,
 		vec3_t *c, vec3_t *n, real_t *r)

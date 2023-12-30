@@ -39,6 +39,10 @@ struct tri_struct
 	};
 };
 
-static inline void tri_trace(tri_t *tri, ray_t *ray);
+void	tri_trace(tri_t *tri, ray_t *ray);
+
+real_t	tri_trace2(	const tri_t *tri, vec3_t *p, vec3_t *d,
+			real_t m, void *prev);
+void	tri_hit(const tri_t *tri, ray_t *ray);
 
 #endif

@@ -27,9 +27,8 @@ struct ray_struct
 	real_t		rc;	/* Recursive coefficient */
 };
 
-static inline
-void ray_trace(	__constant scene_t *scene,
-		vec3_t *c, vec3_t *p, vec3_t *d,
-		unsigned *rand);
+void	ray_trace(	__constant scene_t *scene,
+			vec3_t *c, vec3_t *p, vec3_t *d,
+			unsigned *rand);
 
 #endif

@@ -1,1 +1,11 @@
 #pragma clang diagnostic ignored "-Wtypedef-redefinition"
+
+#include "bih.c"
+#include "box.c"
+#include "prim.c"
+#include "ray.c"
+#include "render.c"
+#include "sph.c"
+#include "tex.c"
+#include "tri.c"
+#include "vec.c"

@@ -25,16 +25,16 @@ static cl_mem		mem_scene;
 
 static const char *	src =
 {
-#include "obj/render.cl.c"
+#include "obj/cl.c.inc"
 };
 
 int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 {
 	cl_platform_id		plat[1];
 	cl_context_properties	prop[3];
-  	cl_uint			nplat;
+	cl_uint			nplat	= 0;
 	cl_device_id		dev[1];
-	cl_uint			ndev;
+	cl_uint			ndev	= 0;
 
 	clGetPlatformIDs(1, plat, &nplat);
 

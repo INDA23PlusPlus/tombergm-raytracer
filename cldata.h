@@ -10,6 +10,12 @@ typedef cl_float3	vec3_cl_t;
 
 typedef struct
 {
+	real_cl_t		min[3];
+	real_cl_t		max[3];
+} box_cl_t;
+
+typedef struct
+{
 	vec3_cl_t		p;
 	vec3_cl_t		uv;
 	vec3_cl_t		fv;
@@ -82,6 +88,22 @@ typedef struct
 
 typedef struct
 {
+	cl_int			type;
+	void *			ptr;
+} prim_cl_t;
+
+typedef struct
+{
+	cl_int			val;
+	union
+	{
+		real_cl_t	clip[2];
+		cl_int		num;
+	};
+} bih_cl_t;
+
+typedef struct
+{
 	cl_int			n_tex;
 	tex_cl_t *		p_tex;
 	cl_int			n_mat;
@@ -90,6 +112,11 @@ typedef struct
 	tri_cl_t *		p_tri;
 	cl_int			n_sph;
 	sph_cl_t *		p_sph;
+	cl_int			n_prim;
+	prim_cl_t *		p_prim;
+	cl_int			n_bih;
+	bih_cl_t *		p_bih;
+	box_cl_t		box;
 } scene_cl_t;
 
 void *cldata_create_scene(	cl_context c, cl_command_queue q,

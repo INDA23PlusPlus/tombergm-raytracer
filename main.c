@@ -13,7 +13,7 @@
 #include "vec.h"
 #include "vp.h"
 
-//#define RT_CL
+#define RT_CL
 
 #ifndef DEBUG
 #define N_THRD	4

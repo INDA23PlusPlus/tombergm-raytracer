@@ -218,7 +218,7 @@ static tri_t tri[] =
 	},
 #endif
 
-//#include "mdl.c"
+#include "mdl.c"
 };
 
 static sph_t sph[] =

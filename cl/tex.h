@@ -24,9 +24,8 @@ static inline int tex_has_r(const tex_t *tex)
 	return tex->r != NULL;
 }
 
-static inline
-void tex_sample(const tex_t *tex,
-		const vec2_t *uv,
-		vec3_t *c, vec3_t *n, real_t *r);
+void	tex_sample(	const tex_t *tex,
+			const vec2_t *uv,
+			vec3_t *c, vec3_t *n, real_t *r);
 
 #endif
