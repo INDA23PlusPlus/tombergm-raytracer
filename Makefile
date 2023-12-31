@@ -37,7 +37,7 @@ $(OBJDIR):
 -include $(OBJDIR)cl.c.d
 
 $(OBJDIR)cl.c: ./cl/main.c | $(OBJDIR)
-	$(CPP) -o $(@) -MMD -MP -MT $(@) -MF $(@:%=%.d) $(<)
+	$(CPP) -o $(@) -MMD -MP -MT $(@) -MF $(@:%=%.d) $(CPPFLAGS) $(<)
 
 $(OBJDIR)cl.c.inc: $(OBJDIR)cl.c | $(OBJDIR)
 	sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/g' -e 's/$$/\\n"/g' $(<) >$(@)

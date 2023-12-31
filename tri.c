@@ -1,5 +1,6 @@
 #include <tgmath.h>
 #include "box.h"
+#include "mat.h"
 #include "tri.h"
 #include "ray.h"
 #include "vec.h"

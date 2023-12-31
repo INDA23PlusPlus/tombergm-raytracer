@@ -1,7 +1,14 @@
 #include <string.h>
 #include <CL/opencl.h>
 #include "cldata.h"
+#include "bih.h"
+#include "box.h"
+#include "mat.h"
+#include "prim.h"
 #include "scene.h"
+#include "sph.h"
+#include "tex.h"
+#include "tri.h"
 
 static int	n_bufs;
 static void *	p_bufs[512];
@@ -325,5 +332,5 @@ void *cldata_create_scene(	cl_context c, cl_command_queue q,
 void cldata_set_kernel_bufs(cl_kernel k)
 {
 	clSetKernelExecInfo(	k, CL_KERNEL_EXEC_INFO_SVM_PTRS,
-				sizeof(void *) * n_bufs, p_bufs);
+				sizeof*(p_bufs) * n_bufs, p_bufs);
 }

@@ -1,12 +1,21 @@
+#include "bih.h"
 #include "mat.h"
+#include "prim.h"
 #include "scene.h"
 #include "sph.h"
+#include "tex.h"
 #include "tri.h"
 
 static tex_t tex[] =
 {
-	{},
-	{},
+	{
+		.c = "./res/Daylight Box UV.png",
+	},
+	{
+		.c = "./res/wood_0018_color_4k.jpg",
+		.n = "./res/wood_0018_normal_opengl_4k.jpg",
+		.r = "./res/wood_0018_roughness_4k.jpg",
+	},
 };
 
 static mat_t mat[] =
@@ -48,7 +57,7 @@ static mat_t mat[] =
 	},
 	{
 		.col	= { 0.4, 0.4, 0.4 },
-		.dif	= 0.40,
+		.dif	= 0.20,
 		.amb	= 0.00,
 		.ref	= 0.80,
 		.tra	= 0.00,
@@ -257,23 +266,43 @@ scene_t scene =
 	.p_sph		= sph,
 };
 
-void scene_init(void)
+void scene_init(scene_t *scene)
 {
-	tex_load_c(&tex[0], "./res/Daylight Box UV.png");
-	tex_load_c(&tex[1], "./res/wood_0018_color_4k.jpg");
-	tex_load_n(&tex[1], "./res/wood_0018_normal_opengl_4k.jpg");
-	tex_load_r(&tex[1], "./res/wood_0018_roughness_4k.jpg");
-
-	for (int i = 0; i < scene.n_tri; i++)
+	for (int i = 0; i < scene->n_tex; i++)
 	{
-		tri_t *tri = &scene.p_tri[i];
+		tex_t *tex = &scene->p_tex[i];
+
+		if (tex->c != NULL)
+		{
+			tex_load_c(tex, tex->c);
+		}
+
+		if (tex->n != NULL)
+		{
+			tex_load_n(tex, tex->n);
+		}
+
+		if (tex->r != NULL)
+		{
+			tex_load_r(tex, tex->r);
+		}
+	}
+
+	for (int i = 0; i < scene->n_tri; i++)
+	{
+		tri_t *tri = &scene->p_tri[i];
 
 		tri_precomp(tri);
 	}
+
+	prim_build(scene);
+	bih_build(scene);
 }
 
-
-void scene_dstr(void)
+void scene_dstr(scene_t *scene)
 {
-	tex_dstr(&tex[0]);
+	for (int i = 0; i < scene->n_tex; i++)
+	{
+		tex_dstr(&scene->p_tex[i]);
+	}
 }

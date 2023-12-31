@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <tgmath.h>
 #include "box.h"
 #include "prim.h"
@@ -36,6 +37,8 @@ void prim_build(scene_t *scene)
 
 	scene->n_prim = v.num;
 	scene->p_prim = v.buf;
+
+	fprintf(stderr, "Primitives: %i\n", scene->n_prim);
 }
 
 void prim_get_box(const prim_t *prim, box_t *box)

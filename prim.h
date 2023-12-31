@@ -1,19 +1,21 @@
 #ifndef PRIM_H
 #define PRIM_H
 
-#include "box.h"
-#include "ray.h"
-
-typedef struct scene_struct scene_t;
+#include "vec.h"
 
 #define PRIM_TRI	0
 #define PRIM_SPH	1
 
-typedef struct
+typedef struct box_struct	box_t;
+typedef struct prim_struct	prim_t;
+typedef struct ray_struct	ray_t;
+typedef struct scene_struct	scene_t;
+
+struct prim_struct
 {
 	int	type;
 	void *	ptr;
-} prim_t;
+};
 
 void	prim_build(scene_t *scene);
 void	prim_get_box(const prim_t *prim, box_t *box);

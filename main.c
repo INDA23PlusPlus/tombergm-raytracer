@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
-#include "bih.h"
 #include "cam.h"
 #include "clrender.h"
 #include "render.h"
@@ -23,6 +22,8 @@
 
 #define WIDTH	800
 #define HEIGHT	600
+
+extern scene_t		scene;
 
 #ifdef RT_CL
 static int		use_cl = 1;
@@ -154,7 +155,7 @@ static void display_func(void)
 	static struct timespec	disp_time;
 	static struct timespec	rate_time;
 	static int		rate_frame;
-	static long		rate_us;
+	static long		rate_ms;
 	static float		fps;
 
 	struct timespec now;
@@ -170,15 +171,15 @@ static void display_func(void)
 		disp_time = now;
 
 		rate_frame++;
-		rate_us = rate_us + dd;
+		rate_ms = rate_ms + dd;
 
 		if (rd >= 1000000l)
 		{
-			fps = rate_frame * (1000000.f / rate_us);
+			fps = rate_frame * (1000000.f / rate_ms);
 
 			rate_time = now;
 			rate_frame = 0;
-			rate_us = 0;
+			rate_ms = 0;
 		}
 	}
 	else
@@ -199,7 +200,7 @@ static void display_func(void)
 	}
 	else
 	{
-		render(&cam, &vp, pb, sb, sn);
+		render(&scene, &cam, &vp, pb, sb, sn);
 	}
 
 	update();
@@ -224,11 +225,12 @@ static void display_func(void)
 
 	if (use_cl)
 	{
-		clrender_commit(&cam, &vp, pb, sb, sn);
+		clrender_commit(&scene, &cam, &vp, pb, sb, sn);
 	}
 	else if (N_THRD != 0)
 	{
-		render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
+		render_task_commit(	rt_list, N_THRD, &scene, &cam, &vp,
+					pb, sb, sn);
 	}
 
 	{
@@ -327,13 +329,11 @@ int main(int argc, char *argv[])
 	vp.w		= WIDTH;
 	vp.h		= HEIGHT;
 
-	scene_init();
-
-	bih_build(&scene);
+	scene_init(&scene);
 
 	if (use_cl)
 	{
-		if (clrender_init(pb, &vp, &scene) != 0)
+		if (clrender_init(&scene, pb, &vp) != 0)
 		{
 			use_cl = 0;
 
@@ -360,11 +360,12 @@ int main(int argc, char *argv[])
 
 	if (use_cl)
 	{
-		clrender_commit(&cam, &vp, pb, sb, sn);
+		clrender_commit(&scene, &cam, &vp, pb, sb, sn);
 	}
 	else if (N_THRD != 0)
 	{
-		render_task_commit(rt_list, N_THRD, &cam, &vp, pb, sb, sn);
+		render_task_commit(	rt_list, N_THRD, &scene, &cam, &vp,
+					pb, sb, sn);
 	}
 
 	{
@@ -407,5 +408,5 @@ int main(int argc, char *argv[])
 		render_task_dstr(rt_list, N_THRD);
 	}
 
-	scene_dstr();
+	scene_dstr(&scene);
 }

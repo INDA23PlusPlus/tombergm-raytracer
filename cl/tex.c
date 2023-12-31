@@ -3,11 +3,11 @@
 
 #define BILERP
 
-static void load_sample(	unsigned char *buf,
-				int w, int h, int x, int y,
-				vec3_t *s)
+static void load_sample(__constant void *buf, int w, int h,
+			int x, int y, vec3_t *s)
 {
-	int i;
+	__constant
+	unsigned char *p = buf;
 
 	if (x < 0) x = w + x % w;
 	if (y < 0) y = h + y % h;
@@ -15,25 +15,23 @@ static void load_sample(	unsigned char *buf,
 	x = x % w;
 	y = y % h;
 
-	i = ((h - 1 - y) * w + x) * 3;
+	p = &p[((h - 1 - y) * w + x) * 3];
 
-	s->x = buf[i + 0] / 255.f;
-	s->y = buf[i + 1] / 255.f;
-	s->z = buf[i + 2] / 255.f;
+	s->x = p[0] / 255.f;
+	s->y = p[1] / 255.f;
+	s->z = p[2] / 255.f;
 }
 
 __attribute__((unused))
-static void nearest(	unsigned char *buf,
-			int w, int h, const vec2_t *uv,
-			vec3_t *s)
+static void nearest(	__constant void *buf, int w, int h,
+			const vec2_t *uv, vec3_t *s)
 {
 	load_sample(buf, w, h, uv->x * (w - 1), uv->y * (h - 1), s);
 }
 
 __attribute__((unused))
-static void bilerp(	unsigned char *buf,
-			int w, int h, const vec2_t *uv,
-			vec3_t *s)
+static void bilerp(	__constant void *buf, int w, int h,
+			const vec2_t *uv, vec3_t *s)
 {
 	real_t	fx	= uv->x * (w - 1);
 	real_t	fy	= uv->y * (h - 1);
@@ -60,8 +58,7 @@ static void bilerp(	unsigned char *buf,
 	*s = s1[0] + fy * *s;
 }
 
-void tex_sample(const tex_t *tex,
-		const vec2_t *uv,
+void tex_sample(const tex_t *tex, const vec2_t *uv,
 		vec3_t *c, vec3_t *n, real_t *r)
 {
 	if (c != NULL && tex->c != NULL)

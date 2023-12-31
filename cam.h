@@ -3,7 +3,9 @@
 
 #include "vec.h"
 
-typedef struct
+typedef struct cam_struct	cam_t;
+
+struct cam_struct
 {
 	vec3_t	p;
 	vec3_t	uv;
@@ -13,6 +15,6 @@ typedef struct
 	real_t	t;
 	real_t	b;
 	real_t	n;
-} cam_t;
+};
 
 #endif

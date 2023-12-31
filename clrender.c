@@ -28,7 +28,7 @@ static const char *	src =
 #include "obj/cl.c.inc"
 };
 
-int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
+int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 {
 	cl_platform_id		plat[1];
 	cl_context_properties	prop[3];
@@ -72,9 +72,7 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 	prop[2] = 0;
 
 	ctxt = clCreateContext(prop, 1, dev, NULL, NULL, NULL);
-
 	queue = clCreateCommandQueueWithProperties(ctxt, dev[0], NULL, NULL);
-
 	prog = clCreateProgramWithSource(ctxt, 1, &src, NULL, NULL);
 
 	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
@@ -122,7 +120,7 @@ int clrender_init(unsigned char *pb, const vp_t *vp, const scene_t *scene)
 	return 0;
 }
 
-void clrender_commit(	cam_t *cam, vp_t *vp,
+void clrender_commit(	scene_t *scene, cam_t *cam, vp_t *vp,
 			unsigned char *pb, vec3_t *sb,
 			int sn)
 {
@@ -166,10 +164,10 @@ void clrender_commit(	cam_t *cam, vp_t *vp,
 
 	{
 		size_t gw[2] = { buf_w, buf_h };
-		size_t lw[2] = { 1, 1 };
 
-		clEnqueueNDRangeKernel(	queue, kern, 2, NULL,
-					gw, lw, 1, &event[0], &event[1]);
+		clEnqueueNDRangeKernel(	queue, kern,
+					2, NULL, gw, NULL,
+					1, &event[0], &event[1]);
 
 		clEnqueueMapBuffer(	queue, mem_pb, CL_FALSE,
 					CL_MAP_READ,

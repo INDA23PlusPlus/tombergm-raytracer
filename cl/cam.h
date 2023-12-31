@@ -3,7 +3,7 @@
 
 #include "vec.h"
 
-typedef struct cam_struct	cam_t;
+typedef __constant struct cam_struct	cam_t;
 
 struct cam_struct
 {

@@ -2,12 +2,14 @@
 #define MAT_H
 
 #include <stddef.h>
-#include "tex.h"
 #include "vec.h"
 
 #define MAT_FLAT	1
 
-typedef struct
+typedef struct mat_struct	mat_t;
+typedef struct tex_struct	tex_t;
+
+struct mat_struct
 {
 	const tex_t *	tex;
 	vec3_t		col;
@@ -17,7 +19,7 @@ typedef struct
 	real_t		tra;
 	real_t		ind;
 	int		flg;
-} mat_t;
+};
 
 static inline int mat_has_tex(const mat_t *mat)
 {

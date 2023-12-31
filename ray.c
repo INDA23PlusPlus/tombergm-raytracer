@@ -11,7 +11,7 @@
 
 #define RAY_DEPTH 8
 
-void ray_shade(ray_t *ray)
+static void ray_shade(scene_t *scene, ray_t *ray)
 {
 	const mat_t *	mat		= ray->mat;
 	real_t		n_cos;
@@ -81,7 +81,7 @@ void ray_shade(ray_t *ray)
 			vec3_set(&c, &vec3_zero);
 			vec3_diffuse(&d, &ray->n, M_PI / 2);
 
-			ray_trace(&c, &ray->q, &d, ray);
+			ray_trace(scene, &c, &ray->q, &d, ray);
 
 			vec3_fma(&ray->c, &ray->c,
 					ref_rc
@@ -98,7 +98,7 @@ void ray_shade(ray_t *ray)
 			vec3_set(&c, &vec3_zero);
 			vec3_fma(&d, &ray->d, -2 * n_cos, &ray->n);
 
-			ray_trace(&c, &ray->q, &d, ray);
+			ray_trace(scene, &c, &ray->q, &d, ray);
 
 			vec3_fma(&ray->c, &ray->c, ref_rc, &c);
 		}
@@ -120,7 +120,7 @@ void ray_shade(ray_t *ray)
 			copysign(sqrt(1 - n_sin_sq), n_cos),
 			&ray->n);
 
-		ray_trace(&c, &ray->q, &d, ray);
+		ray_trace(scene, &c, &ray->q, &d, ray);
 
 		vec3_fma(&ray->c, &ray->c, tra_rc, &c);
 	}
@@ -141,7 +141,7 @@ void ray_shade(ray_t *ray)
 	}
 }
 
-int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
+int ray_trace(scene_t *scene, vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 {
 	ray_t ray;
 
@@ -166,7 +166,7 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 	vec3_set(&ray.d, d);
 	vec3_set(&ray.c, &vec3_zero);
 
-	ray.curr = bih_trace(&scene, p, d, &ray.l, ray.prev);
+	ray.curr = bih_trace(scene, p, d, &ray.l, ray.prev);
 
 	if (ray.curr != NULL)
 	{
@@ -177,7 +177,8 @@ int ray_trace(vec3_t *c, vec3_t *p, vec3_t *d, ray_t *src)
 
 	if (ray.mat != NULL)
 	{
-		ray_shade(&ray);
+		ray_shade(scene, &ray);
+
 		vec3_add(c, c, &ray.c);
 	}
 

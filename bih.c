@@ -219,15 +219,6 @@ void bih_build(scene_t *scene)
 {
 	vector_t bih_vec;
 
-	prim_build(scene);
-
-	fprintf(stderr, "Primitives: %i\n", scene->n_prim);
-
-	if (scene->n_prim == 0)
-	{
-		return;
-	}
-
 	for (int i = 0; i < scene->n_prim; i++)
 	{
 		box_t prim_box;
@@ -249,15 +240,15 @@ void bih_build(scene_t *scene)
 
 	bih_split(scene, &bih_vec, 0, &scene->box, 0, scene->n_prim, -1);
 
+	scene->n_bih = bih_vec.num;
+	scene->p_bih = bih_vec.buf;
+
 	fprintf(stderr, "Nodes: %i\n", bih_vec.num);
 	fprintf(stderr, "Max depth: %i\n", check_depth(&bih_vec, 0));
 	fprintf(stderr, "Max leaf size: %i\n", check_size(&bih_vec, 0));
-
-	scene->n_bih = bih_vec.num;
-	scene->p_bih = bih_vec.buf;
 }
 
-void *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
+prim_t *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
 {
 	int	nodes[2048];
 	box_t	boxes[2048];
@@ -271,7 +262,7 @@ void *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
 	for (int i = 0; i < n; i++)
 	{
 		bih_t *	node	= &scene->p_bih[nodes[i]];
-		box_t *box	= &boxes[i];
+		box_t *	box	= &boxes[i];
 		int	a	= node->val & 3;
 		int	v	= node->val >> 2;
 
@@ -311,27 +302,21 @@ void *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
 			if (dv > 0)
 			{
 				l = n++;
-				nodes[l] = v + 0;
-				boxes[l] = *box;
-				boxes[l].max[a] = node->clip[0];
-
 				r = n++;
-				nodes[r] = v + 1;
-				boxes[r] = *box;
-				boxes[r].min[a] = node->clip[1];
 			}
 			else
 			{
 				r = n++;
-				nodes[r] = v + 1;
-				boxes[r] = *box;
-				boxes[r].min[a] = node->clip[1];
-
 				l = n++;
-				nodes[l] = v + 0;
-				boxes[l] = *box;
-				boxes[l].max[a] = node->clip[0];
 			}
+
+			nodes[l] = v + 0;
+			boxes[l] = *box;
+			boxes[l].max[a] = node->clip[0];
+
+			nodes[r] = v + 1;
+			boxes[r] = *box;
+			boxes[r].min[a] = node->clip[1];
 		}
 	}
 

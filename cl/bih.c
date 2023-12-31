@@ -4,8 +4,7 @@
 #include "scene.h"
 #include "vec.h"
 
-void *bih_trace(__constant scene_t *scene, vec3_t *p, vec3_t *d,
-		real_t *m, prim_t *u)
+prim_t *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
 {
 	int	nodes[2048];
 	box_t	boxes[2048];
@@ -19,7 +18,7 @@ void *bih_trace(__constant scene_t *scene, vec3_t *p, vec3_t *d,
 	for (int i = 0; i < n; i++)
 	{
 		bih_t *	node	= &scene->p_bih[nodes[i]];
-		box_t *box	= &boxes[i];
+		box_t *	box	= &boxes[i];
 		int	a	= node->val & 3;
 		int	v	= node->val >> 2;
 
@@ -59,27 +58,21 @@ void *bih_trace(__constant scene_t *scene, vec3_t *p, vec3_t *d,
 			if (dv > 0)
 			{
 				l = n++;
-				nodes[l] = v + 0;
-				boxes[l] = *box;
-				boxes[l].max[a] = node->clip[0];
-
 				r = n++;
-				nodes[r] = v + 1;
-				boxes[r] = *box;
-				boxes[r].min[a] = node->clip[1];
 			}
 			else
 			{
 				r = n++;
-				nodes[r] = v + 1;
-				boxes[r] = *box;
-				boxes[r].min[a] = node->clip[1];
-
 				l = n++;
-				nodes[l] = v + 0;
-				boxes[l] = *box;
-				boxes[l].max[a] = node->clip[0];
 			}
+
+			nodes[l] = v + 0;
+			boxes[l] = *box;
+			boxes[l].max[a] = node->clip[0];
+
+			nodes[r] = v + 1;
+			boxes[r] = *box;
+			boxes[r].min[a] = node->clip[1];
 		}
 	}
 

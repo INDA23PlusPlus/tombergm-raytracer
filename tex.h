@@ -4,14 +4,16 @@
 #include <stddef.h>
 #include "vec.h"
 
-typedef struct
+typedef struct tex_struct	tex_t;
+
+struct tex_struct
 {
-	int		w;
-	int		h;
-	unsigned char *	c;
-	unsigned char *	n;
-	unsigned char *	r;
-} tex_t;
+	int	w;
+	int	h;
+	void *	c;
+	void *	n;
+	void *	r;
+};
 
 static inline int tex_has_n(const tex_t *tex)
 {

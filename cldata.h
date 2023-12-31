@@ -2,11 +2,12 @@
 #define CLDATA_H
 
 #include <CL/opencl.h>
-#include "scene.h"
 
-typedef cl_float	real_cl_t;
-typedef cl_float2	vec2_cl_t;
-typedef cl_float3	vec3_cl_t;
+typedef struct scene_struct	scene_t;
+
+typedef cl_float		real_cl_t;
+typedef cl_float2		vec2_cl_t;
+typedef cl_float3		vec3_cl_t;
 
 typedef struct
 {
@@ -30,9 +31,9 @@ typedef struct
 {
 	cl_int			w;
 	cl_int			h;
-	unsigned char *		c;
-	unsigned char *		n;
-	unsigned char *		r;
+	void *			c;
+	void *			n;
+	void *			r;
 } tex_cl_t;
 
 typedef struct

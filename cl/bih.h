@@ -3,9 +3,9 @@
 
 #include "vec.h"
 
-typedef struct bih_struct	bih_t;
-typedef struct prim_struct	prim_t;
-typedef struct scene_struct	scene_t;
+typedef __constant struct bih_struct	bih_t;
+typedef __constant struct prim_struct	prim_t;
+typedef __constant struct scene_struct	scene_t;
 
 struct bih_struct
 {
@@ -17,7 +17,7 @@ struct bih_struct
 	};
 };
 
-void *	bih_trace(	__constant scene_t *scene, vec3_t *p, vec3_t *d,
+prim_t *bih_trace(	scene_t *scene, vec3_t *p, vec3_t *d,
 			real_t *m, prim_t *u);
 
 #endif
