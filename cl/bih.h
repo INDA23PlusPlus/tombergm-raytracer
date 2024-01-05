@@ -10,9 +10,10 @@ typedef __constant struct prim_struct	prim_t;
 
 struct bih_struct
 {
-	int		val;
-	int		num;
 	box_t		box;
+	int		next;
+	int		prim_idx;
+	int		prim_num;
 };
 
 int	bih_trace(SCENE, vec3_t *p, vec3_t *d, real_t *m, int u);

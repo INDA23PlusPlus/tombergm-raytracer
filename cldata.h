@@ -103,9 +103,10 @@ typedef struct
 
 typedef struct
 {
-	cl_int			val;
-	cl_int			num;
 	box_cl_t		box;
+	cl_int			next;
+	cl_int			prim_idx;
+	cl_int			prim_num;
 } bih_cl_t;
 
 typedef struct
