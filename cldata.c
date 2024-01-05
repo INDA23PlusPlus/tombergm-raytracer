@@ -1,8 +1,10 @@
+#include <CL/cl.h>
 #include <string.h>
 #include <CL/opencl.h>
 #include "cldata.h"
 #include "bih.h"
 #include "box.h"
+#include "cl/box.h"
 #include "mat.h"
 #include "prim.h"
 #include "scene.h"
@@ -10,24 +12,28 @@
 #include "tex.h"
 #include "tri.h"
 
-static int	n_bufs;
-static void *	p_bufs[512];
+static int		n_img;
+static const tex_t *	p_tex[512];
+static void *		p_buf[512];
 
-static void *clmalloc(cl_context c, cl_command_queue q, size_t size)
+static void *clmalloc(cl_context c, cl_command_queue q, size_t size, cl_mem *m)
 {
-	void *ptr = clSVMAlloc(c, CL_MEM_READ_ONLY, size, 0);
+	void *ptr = malloc(size);
 
-	clEnqueueSVMMap(q, CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION,
-			ptr, size, 0, NULL, NULL);
+	*m = clCreateBuffer(	c, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+				size, ptr, NULL);
 
-	p_bufs[n_bufs++] = ptr;
+	clEnqueueMapBuffer(	q, *m, CL_TRUE,
+				CL_MAP_WRITE_INVALIDATE_REGION,
+				0, size,
+				0, NULL, NULL, NULL);
 
 	return ptr;
 }
 
-static void clunmap(cl_context c, cl_command_queue q, void *ptr)
+static void clunmap(cl_context c, cl_command_queue q, void *ptr, cl_mem *m)
 {
-	clEnqueueSVMUnmap(q, ptr, 0, NULL, NULL);
+	clEnqueueUnmapMemObject(q, *m, ptr, 0, NULL, NULL);
 }
 
 static void copy_vec2(vec2_cl_t *vec_cl, const vec2_t *vec)
@@ -64,35 +70,35 @@ static void copy_tex(	cl_context c, cl_command_queue q,
 
 	if (tex->c != NULL)
 	{
-		tex_cl->c = clmalloc(c, q, tex->w * tex->h * 3);
-		memcpy(tex_cl->c, tex->c, tex->w * tex->h * 3);
-		clunmap(c, q, tex_cl->c);
+		p_tex[n_img] = tex;
+		p_buf[n_img] = tex->c;
+		tex_cl->c = n_img++;
 	}
 	else
 	{
-		tex_cl->c = NULL;
+		tex_cl->c = -1;
 	}
 
 	if (tex->n != NULL)
 	{
-		tex_cl->n = clmalloc(c, q, tex->w * tex->h * 3);
-		memcpy(tex_cl->n, tex->n, tex->w * tex->h * 3);
-		clunmap(c, q, tex_cl->n);
+		p_tex[n_img] = tex;
+		p_buf[n_img] = tex->n;
+		tex_cl->n = n_img++;
 	}
 	else
 	{
-		tex_cl->n = NULL;
+		tex_cl->n = -1;
 	}
 
 	if (tex->r != NULL)
 	{
-		tex_cl->r = clmalloc(c, q, tex->w * tex->h * 3);
-		memcpy(tex_cl->r, tex->r, tex->w * tex->h * 3);
-		clunmap(c, q, tex_cl->r);
+		p_tex[n_img] = tex;
+		p_buf[n_img] = tex->r;
+		tex_cl->r = n_img++;
 	}
 	else
 	{
-		tex_cl->r = NULL;
+		tex_cl->r = -1;
 	}
 }
 
@@ -102,11 +108,11 @@ static void copy_mat(	cl_context c, cl_command_queue q,
 {
 	if (mat->tex != NULL)
 	{
-		mat_cl->tex = scene_cl->p_tex + (mat->tex - scene->p_tex);
+		mat_cl->tex = mat->tex - scene->p_tex;
 	}
 	else
 	{
-		mat_cl->tex = NULL;
+		mat_cl->tex = -1;
 	}
 
 	copy_vec3(&mat_cl->col, &mat->col);
@@ -129,11 +135,11 @@ static void copy_tri(	cl_context c, cl_command_queue q,
 
 	if (tri->mat != NULL)
 	{
-		tri_cl->mat = scene_cl->p_mat + (tri->mat - scene->p_mat);
+		tri_cl->mat = tri->mat - scene->p_mat;
 	}
 	else
 	{
-		tri_cl->mat = NULL;
+		tri_cl->mat = -1;
 	}
 
 	copy_vec2(&tri_cl->at, &tri->at);
@@ -168,7 +174,7 @@ static void copy_sph(	cl_context c, cl_command_queue q,
 
 	sph_cl->r = sph->r;
 
-	sph_cl->mat = scene_cl->p_mat + (sph->mat - scene->p_mat);
+	sph_cl->mat = sph->mat - scene->p_mat;
 }
 
 static void copy_prim(	cl_context c, cl_command_queue q,
@@ -181,36 +187,102 @@ static void copy_prim(	cl_context c, cl_command_queue q,
 	{
 		case PRIM_TRI:
 		{
-			prim_cl->ptr =
-				scene_cl->p_tri +
-				((tri_t *) prim->ptr - scene->p_tri);
+			prim_cl->idx = (tri_t *) prim->ptr - scene->p_tri;
 			break;
 		}
 		case PRIM_SPH:
 		{
-			prim_cl->ptr =
-				scene_cl->p_sph +
-				((sph_t *) prim->ptr - scene->p_sph);
+			prim_cl->idx = (sph_t *) prim->ptr - scene->p_sph;
 			break;
 		}
 	}
 }
 
-static void copy_bih(	cl_context c, cl_command_queue q,
-			bih_cl_t *bih_cl, const bih_t *bih,
+static void copy_bih(	bih_cl_t *bih_cl, bih_t *bih,
+			box_cl_t *box_cl,
 			scene_cl_t *scene_cl, const scene_t *scene)
 {
-	bih_cl->val = bih->val;
+	int	v	= bih->val >> 2;
+	int	a	= bih->val & 3;
 
-	if ((bih->val & 3) == 3)
+	bih_cl->val = bih->val;
+	bih_cl->num = bih->num;
+	bih_cl->box = *box_cl;
+
+	if (a != 3)
 	{
-		bih_cl->num = bih->num;
+		bih_t *		l_bih		= &scene->p_bih[v + 0];
+		bih_t *		r_bih		= &scene->p_bih[v + 1];
+		bih_cl_t *	l_bih_cl	= &scene_cl->p_bih[v + 0];
+		bih_cl_t *	r_bih_cl	= &scene_cl->p_bih[v + 1];
+		box_cl_t	l_box_cl	= *box_cl;
+		box_cl_t	r_box_cl	= *box_cl;
+
+		l_box_cl.max[a] = bih->clip[0];
+		r_box_cl.min[a] = bih->clip[1];
+
+		copy_bih(l_bih_cl, l_bih, &l_box_cl, scene_cl, scene);
+		copy_bih(r_bih_cl, r_bih, &r_box_cl, scene_cl, scene);
 	}
-	else
+}
+
+static void copy_images(cl_context c, cl_command_queue q, scene_cl_t *scene_cl)
+{
+	int		w	= 4096;
+	int		h	= 4096;
+	int		p	= 4;
+	int		r	= w * p;
+	int		s	= r * h;
+	cl_image_format	fmt;
+	cl_image_desc	dsc;
+
+	scene_cl->p_img = malloc(s * n_img);
+
+	for (int i = 0; i < n_img; i++)
 	{
-		bih_cl->clip[0] = bih->clip[0];
-		bih_cl->clip[1] = bih->clip[1];
+		for (int y = 0; y < h; y++)
+		{
+			for (int x = 0; x < w; x++)
+			{
+				vec2_t		uv;
+				vec3_t		c;
+				unsigned char *	b;
+
+				uv.x = (real_t) x / (w - 1);
+				uv.y = (real_t) y / (h - 1);
+
+				c = tex_sample_buf(p_tex[i], &uv, p_buf[i]);
+
+				b = scene_cl->p_img;
+				b = &b[i * s + y * r + x * p];
+
+				b[0] = 0.5 + c.x * 255;
+				b[1] = 0.5 + c.y * 255;
+				b[2] = 0.5 + c.z * 255;
+				b[3] = 255;
+			}
+		}
 	}
+
+	fmt.image_channel_order		= CL_RGBA;
+	fmt.image_channel_data_type	= CL_UNORM_INT8;
+
+	dsc.image_type		= CL_MEM_OBJECT_IMAGE2D_ARRAY;
+	dsc.image_width		= w;
+	dsc.image_height	= h;
+	dsc.image_depth		= 0;
+	dsc.image_array_size	= n_img;
+	dsc.image_row_pitch	= r;
+	dsc.image_slice_pitch	= s;
+	dsc.num_mip_levels	= 0;
+	dsc.num_samples		= 0;
+	dsc.mem_object		= NULL;
+
+	scene_cl->m_img = clCreateImage(	c,
+						CL_MEM_READ_ONLY	|
+						CL_MEM_USE_HOST_PTR,
+						&fmt, &dsc,
+						scene_cl->p_img, NULL);
 }
 
 static void copy_scene(	cl_context c, cl_command_queue q,
@@ -219,7 +291,8 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 	{
 		scene_cl->n_tex = scene->n_tex;
 		scene_cl->p_tex =
-			clmalloc(c, q, sizeof(tex_cl_t) * scene->n_tex);
+			clmalloc(	c, q, sizeof(tex_cl_t) * scene->n_tex,
+					&scene_cl->m_tex);
 
 		for (int i = 0; i < scene->n_tex; i++)
 		{
@@ -229,13 +302,14 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 					scene_cl, scene);
 		}
 
-		clunmap(c, q, scene_cl->p_tex);
+		clunmap(c, q, scene_cl->p_tex, &scene_cl->m_tex);
 	}
 
 	{
 		scene_cl->n_mat = scene->n_mat;
 		scene_cl->p_mat =
-			clmalloc(c, q, sizeof(mat_cl_t) * scene->n_mat);
+			clmalloc(	c, q, sizeof(mat_cl_t) * scene->n_mat,
+					&scene_cl->m_mat);
 
 		for (int i = 0; i < scene->n_mat; i++)
 		{
@@ -245,13 +319,14 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 					scene_cl, scene);
 		}
 
-		clunmap(c, q, scene_cl->p_mat);
+		clunmap(c, q, scene_cl->p_mat, &scene_cl->m_mat);
 	}
 
 	{
 		scene_cl->n_tri = scene->n_tri;
 		scene_cl->p_tri =
-			clmalloc(c, q, sizeof(tri_cl_t) * scene->n_tri);
+			clmalloc(	c, q, sizeof(tri_cl_t) * scene->n_tri,
+					&scene_cl->m_tri);
 
 		for (int i = 0; i < scene->n_tri; i++)
 		{
@@ -261,13 +336,14 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 					scene_cl, scene);
 		}
 
-		clunmap(c, q, scene_cl->p_tri);
+		clunmap(c, q, scene_cl->p_tri, &scene_cl->m_tri);
 	}
 
 	{
 		scene_cl->n_sph = scene->n_sph;
 		scene_cl->p_sph =
-			clmalloc(c, q, sizeof(sph_cl_t) * scene->n_sph);
+			clmalloc(	c, q, sizeof(sph_cl_t) * scene->n_sph,
+					&scene_cl->m_sph);
 
 		for (int i = 0; i < scene->n_sph; i++)
 		{
@@ -277,13 +353,14 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 					scene_cl, scene);
 		}
 
-		clunmap(c, q, scene_cl->p_sph);
+		clunmap(c, q, scene_cl->p_sph, &scene_cl->m_sph);
 	}
 
 	{
 		scene_cl->n_prim = scene->n_prim;
 		scene_cl->p_prim =
-			clmalloc(c, q, sizeof(prim_cl_t) * scene->n_prim);
+			clmalloc(	c, q, sizeof(prim_cl_t) * scene->n_prim,
+					&scene_cl->m_prim);
 
 		for (int i = 0; i < scene->n_prim; i++)
 		{
@@ -293,44 +370,41 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 					scene_cl, scene);
 		}
 
-		clunmap(c, q, scene_cl->p_prim);
+		clunmap(c, q, scene_cl->p_prim, &scene_cl->m_prim);
+	}
+
+	{
+		scene_cl->p_box = clmalloc(	c, q, sizeof(box_cl_t),
+						&scene_cl->m_box);
+
+		copy_box(c, q, scene_cl->p_box, &scene->box, scene_cl, scene);
+
+		clunmap(c, q, scene_cl->p_box, &scene_cl->m_box);
 	}
 
 	{
 		scene_cl->n_bih = scene->n_bih;
 		scene_cl->p_bih =
-			clmalloc(c, q, sizeof(bih_cl_t) * scene->n_bih);
+			clmalloc(	c, q, sizeof(bih_cl_t) * scene->n_bih,
+					&scene_cl->m_bih);
 
-		for (int i = 0; i < scene->n_bih; i++)
-		{
-			copy_bih(	c, q,
-					&scene_cl->p_bih[i],
-					&scene->p_bih[i],
-					scene_cl, scene);
-		}
+		copy_bih(	scene_cl->p_bih, scene->p_bih, scene_cl->p_box,
+				scene_cl, scene);
 
-		clunmap(c, q, scene_cl->p_bih);
+		clunmap(c, q, scene_cl->p_bih, &scene_cl->m_bih);
 	}
 
-	copy_box(c, q, &scene_cl->box, &scene->box, scene_cl, scene);
+	copy_images(c, q, scene_cl);
 }
 
 void *cldata_create_scene(	cl_context c, cl_command_queue q,
 				const scene_t *scene)
 {
-	scene_cl_t *scene_cl = clmalloc(c, q, sizeof(scene_cl_t));
+	scene_cl_t *scene_cl = malloc(sizeof(scene_cl_t));
 
 	copy_scene(c, q, scene_cl, scene);
-
-	clunmap(c, q, scene_cl);
 
 	clFinish(q);
 
 	return scene_cl;
-}
-
-void cldata_set_kernel_bufs(cl_kernel k)
-{
-	clSetKernelExecInfo(	k, CL_KERNEL_EXEC_INFO_SVM_PTRS,
-				sizeof*(p_bufs) * n_bufs, p_bufs);
 }

@@ -1,6 +1,7 @@
 #ifndef PRIM_H
 #define PRIM_H
 
+#include "scene.h"
 #include "vec.h"
 
 #define PRIM_TRI	0
@@ -8,17 +9,17 @@
 
 typedef __constant struct prim_struct	prim_t;
 typedef struct ray_struct		ray_t;
-typedef __constant struct scene_struct	scene_t;
+typedef __constant struct sph_struct	sph_t;
+typedef __constant struct tri_struct	tri_t;
 
 struct prim_struct
 {
 	int	type;
-	__constant
-	void *	ptr;
+	int	idx;
 };
 
-real_t	prim_trace(	const prim_t *prim, vec3_t *p, vec3_t *d,
-			real_t m, prim_t *u);
-void	prim_hit(const prim_t *prim, ray_t *ray);
+real_t	prim_trace(	SCENE, const prim_t *prim, vec3_t *p, vec3_t *d,
+			real_t m, bool prev);
+void	prim_hit(SCENE, const prim_t *prim, ray_t *ray);
 
 #endif

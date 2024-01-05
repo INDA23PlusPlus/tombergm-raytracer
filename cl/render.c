@@ -6,7 +6,7 @@
 
 __kernel
 void render(	__global unsigned char *pb, __global vec3_t *sb,
-		cam_t *cam, scene_t *scene, int sn, unsigned rand)
+		cam_t *cam, SCENE, int sn, unsigned rand)
 {
 	int	w	= get_global_size(0);
 	int	h	= get_global_size(1);
@@ -22,10 +22,12 @@ void render(	__global unsigned char *pb, __global vec3_t *sb,
 	real_t	b	= cam->b;
 	real_t	n	= cam->n;
 
-	rand = (rand ^ x) + y;
-	rand = ((rand << ((y * x) & 31)) | (rand >> (32 - ((y * x) & 31))));
+	rand =	(rand ^ x) * (y + 1);
+	rand =	((rand << (((y + 1) * (x + 1)) & 31))		|
+		(rand >> (32 - (((y + 1) * (x + 1)) & 31))))	;
 
 	{
+		__global
 		unsigned char *	pix	= &pb[(y * w + x) * 4];
 		vec3_t		c	= 0;
 		vec3_t		d;
@@ -42,6 +44,7 @@ void render(	__global unsigned char *pb, __global vec3_t *sb,
 
 		if (sn != 0)
 		{
+			__global
 			vec3_t *s = &sb[y * w + x];
 
 			if (sn == 1)

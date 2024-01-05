@@ -11,6 +11,6 @@ struct box_struct
 	real_t	max[3];
 };
 
-real_t	box_trace(const box_t *box, vec3_t *p, vec3_t *d, real_t m);
+real_t	box_trace(__constant const box_t *box, vec3_t *p, vec3_t *d, real_t m);
 
 #endif

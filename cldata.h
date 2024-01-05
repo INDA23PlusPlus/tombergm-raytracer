@@ -25,20 +25,22 @@ typedef struct
 	real_cl_t		t;
 	real_cl_t		b;
 	real_cl_t		n;
+	char			_pad0[12];
 } cam_cl_t;
 
 typedef struct
 {
 	cl_int			w;
 	cl_int			h;
-	void *			c;
-	void *			n;
-	void *			r;
+	cl_int			c;
+	cl_int			n;
+	cl_int			r;
 } tex_cl_t;
 
 typedef struct
 {
-	const tex_cl_t *	tex;
+	cl_int			tex;
+	char			_pad0[12];
 	vec3_cl_t		col;
 	real_cl_t		dif;
 	real_cl_t		amb;
@@ -46,6 +48,7 @@ typedef struct
 	real_cl_t		tra;
 	real_cl_t		ind;
 	cl_int			flg;
+	char			_pad1[8];
 } mat_cl_t;
 
 typedef struct
@@ -54,8 +57,9 @@ typedef struct
 	vec3_cl_t		b;
 	vec3_cl_t		c;
 
-	const mat_cl_t *	mat;
+	cl_int			mat;
 
+	char			_pad0[4];
 	vec2_cl_t		at;
 	vec2_cl_t		bt;
 	vec2_cl_t		ct;
@@ -69,11 +73,13 @@ typedef struct
 		vec2_cl_t	pb;
 		vec2_cl_t	pc;
 		real_cl_t	d;
+		char		_pad1[4];
 		vec2_cl_t	iv;
 		vec2_cl_t	jv;
 		vec3_cl_t	iw;
 		vec3_cl_t	jw;
 		real_cl_t	td;
+		char		_pad2[12];
 		vec3_cl_t	tu;
 		vec3_cl_t	tv;
 	};
@@ -84,45 +90,51 @@ typedef struct
 	vec3_cl_t		c;
 	real_cl_t		r;
 
-	const mat_cl_t *	mat;
+	cl_int			mat;
+
+	char			_pad0[8];
 } sph_cl_t;
 
 typedef struct
 {
 	cl_int			type;
-	void *			ptr;
+	cl_int			idx;
 } prim_cl_t;
 
 typedef struct
 {
 	cl_int			val;
-	union
-	{
-		real_cl_t	clip[2];
-		cl_int		num;
-	};
+	cl_int			num;
+	box_cl_t		box;
 } bih_cl_t;
 
 typedef struct
 {
 	cl_int			n_tex;
 	tex_cl_t *		p_tex;
+	cl_mem			m_tex;
 	cl_int			n_mat;
 	mat_cl_t *		p_mat;
+	cl_mem			m_mat;
 	cl_int			n_tri;
 	tri_cl_t *		p_tri;
+	cl_mem			m_tri;
 	cl_int			n_sph;
 	sph_cl_t *		p_sph;
+	cl_mem			m_sph;
 	cl_int			n_prim;
 	prim_cl_t *		p_prim;
+	cl_mem			m_prim;
 	cl_int			n_bih;
 	bih_cl_t *		p_bih;
-	box_cl_t		box;
+	cl_mem			m_bih;
+	void *			p_img;
+	cl_mem			m_img;
+	box_cl_t *		p_box;
+	cl_mem			m_box;
 } scene_cl_t;
 
 void *cldata_create_scene(	cl_context c, cl_command_queue q,
 				const scene_t *scene);
-
-void cldata_set_kernel_bufs(cl_kernel k);
 
 #endif

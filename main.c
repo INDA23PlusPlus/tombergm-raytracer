@@ -238,11 +238,11 @@ static void display_func(void)
 
 		if (sn == 0)
 		{
-			sprintf(t, "FPS: %.2f    Samples: %i", fps, 1);
+			sprintf(t, "FPS: % 6.2f    Samples: % 6i", fps, 1);
 		}
 		else
 		{
-			sprintf(t, "FPS: %.2f    Samples: %i", fps, sn);
+			sprintf(t, "FPS: % 6.2f    Samples: % 6i", fps, sn);
 		}
 
 		glutSetWindowTitle(t);

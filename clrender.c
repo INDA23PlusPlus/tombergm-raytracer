@@ -5,6 +5,9 @@
 #include "scene.h"
 #include "vp.h"
 
+#define PLAT	0
+#define DEV	0
+
 static cl_context	ctxt;
 static cl_command_queue	queue;
 static cl_program	prog;
@@ -30,57 +33,52 @@ static const char *	src =
 
 int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 {
-	cl_platform_id		plat[1];
+	cl_platform_id		plat[PLAT + 1];
 	cl_context_properties	prop[3];
 	cl_uint			nplat	= 0;
-	cl_device_id		dev[1];
+	cl_device_id		dev[DEV + 1];
 	cl_uint			ndev	= 0;
 
-	clGetPlatformIDs(1, plat, &nplat);
+	clGetPlatformIDs(PLAT + 1, plat, &nplat);
 
-	if (nplat == 0)
+	if (nplat < PLAT + 1)
 	{
 		return -1;
 	}
 
-	clGetDeviceIDs(plat[0], CL_DEVICE_TYPE_GPU, 1, dev, &ndev);
+	clGetDeviceIDs(plat[PLAT], CL_DEVICE_TYPE_ALL, DEV + 1, dev, &ndev);
 
-	if (ndev == 0)
+	if (ndev < DEV + 1)
 	{
-		clGetDeviceIDs(plat[0], CL_DEVICE_TYPE_CPU, 1, dev, &ndev);
-
-		if (ndev == 0)
-		{
-			return -1;
-		}
+		return -1;
 	}
 
 	{
 		char n[256];
 		char v[256];
 
-		clGetDeviceInfo(dev[0], CL_DEVICE_NAME,
+		clGetDeviceInfo(dev[DEV], CL_DEVICE_NAME,
 				sizeof(n), n, NULL);
-		clGetDeviceInfo(dev[0], CL_DEVICE_VERSION,
+		clGetDeviceInfo(dev[DEV], CL_DEVICE_VERSION,
 				sizeof(v), v, NULL);
 
 		fprintf(stderr, "Using OpenCL: %s, %s\n", n, v);
 	}
 
 	prop[0] = CL_CONTEXT_PLATFORM;
-	prop[1] = (cl_context_properties) plat[0];
+	prop[1] = (cl_context_properties) plat[PLAT];
 	prop[2] = 0;
 
-	ctxt = clCreateContext(prop, 1, dev, NULL, NULL, NULL);
-	queue = clCreateCommandQueueWithProperties(ctxt, dev[0], NULL, NULL);
+	ctxt = clCreateContext(prop, 1, &dev[DEV], NULL, NULL, NULL);
+	queue = clCreateCommandQueueWithProperties(ctxt, dev[DEV], NULL, NULL);
 	prog = clCreateProgramWithSource(ctxt, 1, &src, NULL, NULL);
 
 	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
 	{
-		char log[1024 * 16];
+		char log[1024 * 256];
 		size_t log_size;
 
-		clGetProgramBuildInfo(	prog, dev[0], CL_PROGRAM_BUILD_LOG,
+		clGetProgramBuildInfo(	prog, dev[DEV], CL_PROGRAM_BUILD_LOG,
 					sizeof(log), log, &log_size);
 
 		if (log_size > 2)
@@ -95,7 +93,6 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 	buf_h = vp->h;
 
 	scene_cl = cldata_create_scene(ctxt, queue, scene);
-	cldata_set_kernel_bufs(kern);
 
 	mem_pb	= clCreateBuffer(	ctxt,
 					CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR,
@@ -115,7 +112,20 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 	clSetKernelArg(kern, 0, sizeof(mem_pb), &mem_pb);
 	clSetKernelArg(kern, 1, sizeof(mem_sb), &mem_sb);
 	clSetKernelArg(kern, 2, sizeof(mem_cam), &mem_cam);
-	clSetKernelArg(kern, 3, sizeof(mem_scene), &mem_scene);
+	clSetKernelArg(kern, 3, sizeof(scene_cl->n_tex), &scene_cl->n_tex);
+	clSetKernelArg(kern, 4, sizeof(scene_cl->m_tex), &scene_cl->m_tex);
+	clSetKernelArg(kern, 5, sizeof(scene_cl->n_mat), &scene_cl->n_mat);
+	clSetKernelArg(kern, 6, sizeof(scene_cl->m_mat), &scene_cl->m_mat);
+	clSetKernelArg(kern, 7, sizeof(scene_cl->n_tri), &scene_cl->n_tri);
+	clSetKernelArg(kern, 8, sizeof(scene_cl->m_tri), &scene_cl->m_tri);
+	clSetKernelArg(kern, 9, sizeof(scene_cl->n_sph), &scene_cl->n_sph);
+	clSetKernelArg(kern, 10, sizeof(scene_cl->m_sph), &scene_cl->m_sph);
+	clSetKernelArg(kern, 11, sizeof(scene_cl->n_prim), &scene_cl->n_prim);
+	clSetKernelArg(kern, 12, sizeof(scene_cl->m_prim), &scene_cl->m_prim);
+	clSetKernelArg(kern, 13, sizeof(scene_cl->n_bih), &scene_cl->n_bih);
+	clSetKernelArg(kern, 14, sizeof(scene_cl->m_bih), &scene_cl->m_bih);
+	clSetKernelArg(kern, 15, sizeof(scene_cl->m_img), &scene_cl->m_img);
+	clSetKernelArg(kern, 16, sizeof(scene_cl->m_box), &scene_cl->m_box);
 
 	return 0;
 }
@@ -153,13 +163,13 @@ void clrender_commit(	scene_t *scene, cam_t *cam, vp_t *vp,
 	{
 		sn_cl = sn;
 
-		clSetKernelArg(kern, 4, sizeof(sn_cl), &sn_cl);
+		clSetKernelArg(kern, 17, sizeof(sn_cl), &sn_cl);
 	}
 
 	{
 		cl_uint sn_rand = rand();
 
-		clSetKernelArg(kern, 5, sizeof(sn_rand), &sn_rand);
+		clSetKernelArg(kern, 18, sizeof(sn_rand), &sn_rand);
 	}
 
 	{

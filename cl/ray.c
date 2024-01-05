@@ -8,8 +8,7 @@
 
 #define RAY_DEPTH 8
 
-static void ray_trace_f0(	scene_t *scene, ray_t *ray,
-				ray_t *rec, unsigned *rand)
+static void ray_trace_f0(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 {
 	float n_cos;
 	float n_sin_sq;
@@ -19,7 +18,7 @@ static void ray_trace_f0(	scene_t *scene, ray_t *ray,
 
 	ray->curr = bih_trace(scene, &ray->p, &ray->d, &ray->l, ray->prev);
 
-	if (ray->curr == NULL)
+	if (ray->curr == -1)
 	{
 		/* Nothing hit */
 		return;
@@ -27,20 +26,20 @@ static void ray_trace_f0(	scene_t *scene, ray_t *ray,
 
 	ray->q = ray->p + ray->l * ray->d;
 
-	prim_hit(ray->curr, ray);
+	prim_hit(scene, PRIM(ray->curr), ray);
 
 	ray->c = 0;
 	ray->tc = 1;
 	ray->tr = 1;
 
-	if (mat_has_tex(ray->mat))
+	if (mat_has_tex(MAT(ray->mat)))
 	{
 		vec3_t tn;
 
-		tex_sample(	ray->mat->tex, &ray->uv,
+		tex_sample(	scene, TEX(MAT(ray->mat)->tex), &ray->uv,
 				&ray->tc, &tn, &ray->tr);
 
-		if (tex_has_n(ray->mat->tex))
+		if (tex_has_n(TEX(MAT(ray->mat)->tex)))
 		{
 			ray->n = tn.z * ray->n;
 			ray->n = ray->n + tn.x * ray->tu;
@@ -49,9 +48,9 @@ static void ray_trace_f0(	scene_t *scene, ray_t *ray,
 		}
 	}
 
-	ray->tc = ray->tc * ray->mat->col;
+	ray->tc = ray->tc * MAT(ray->mat)->col;
 
-	if ((ray->mat->flg & MAT_FLAT) != 0 || rec == NULL)
+	if ((MAT(ray->mat)->flg & MAT_FLAT) != 0 || rec->curr != -1)
 	{
 		/* No recursive rays */
 		return;
@@ -59,18 +58,18 @@ static void ray_trace_f0(	scene_t *scene, ray_t *ray,
 
 	n_cos = dot(ray->d, ray->n);
 
-	float ref_rc = ray->mat->ref;
+	float ref_rc = MAT(ray->mat)->ref;
 	float tra_rc = ray->tr;
 	float ind;
 	float R;
 
 	if (n_cos < 0)
 	{
-		ind = ray->mat->ind;
+		ind = MAT(ray->mat)->ind;
 	}
 	else
 	{
-		ind = 1. / ray->mat->ind;
+		ind = 1. / MAT(ray->mat)->ind;
 	}
 
 	{
@@ -91,9 +90,9 @@ static void ray_trace_f0(	scene_t *scene, ray_t *ray,
 		}
 	}
 
-	if (flt_rand(rand) * ray->mat->tra <= R)
+	if (flt_rand(rand) * MAT(ray->mat)->tra <= R)
 	{
-		if (flt_rand(rand) * ray->tr < ray->mat->dif)
+		if (flt_rand(rand) * ray->tr < MAT(ray->mat)->dif)
 		{
 			/* Diffuse reflection */
 			rec->prev = ray->curr;
@@ -122,12 +121,12 @@ static void ray_trace_f0(	scene_t *scene, ray_t *ray,
 	}
 }
 
-static void ray_shade_f0(scene_t *scene, ray_t *ray, ray_t *rec)
+static void ray_shade_f0(SCENE, ray_t *ray, ray_t *rec)
 {
-	const mat_t *mat = ray->mat;
+	const mat_t *mat = MAT(ray->mat);
 
 	/* Recursive ray */
-	if (rec != NULL && rec->curr != NULL)
+	if (rec->prev != -1)
 	{
 		ray->c = ray->c + ray->rc * rec->c;
 	}
@@ -183,21 +182,23 @@ static void ray_shade_f0(scene_t *scene, ray_t *ray, ray_t *rec)
 #endif
 }
 
-void ray_trace(	scene_t *scene,
-		vec3_t *c, vec3_t *p, vec3_t *d,
-		unsigned *rand)
+void ray_trace(SCENE, vec3_t *c, vec3_t *p, vec3_t *d, unsigned *rand)
 {
+	ray_t	no_ray;
 	ray_t	rays[RAY_DEPTH];
 	int	i;
 	int	j;
 
+	no_ray.prev = -1;
+	no_ray.curr = 0;
+
 	for (i = 0; i < RAY_DEPTH; i++)
 	{
-		rays[i].curr = NULL;
-		rays[i].prev = NULL;
+		rays[i].curr = -1;
+		rays[i].prev = -1;
 	}
 
-	rays[0].prev	= scene->p_prim - 1;
+	rays[0].prev	= -2;
 	rays[0].p	= *p;
 	rays[0].d	= *d;
 
@@ -206,7 +207,7 @@ void ray_trace(	scene_t *scene,
 
 	while (i < RAY_DEPTH)
 	{
-		if (rays[i].prev != NULL)
+		if (rays[i].prev != -1)
 		{
 			if (j < RAY_DEPTH)
 			{
@@ -214,7 +215,7 @@ void ray_trace(	scene_t *scene,
 			}
 			else
 			{
-				ray_trace_f0(scene, &rays[i], NULL, rand);
+				ray_trace_f0(scene, &rays[i], &no_ray, rand);
 			}
 		}
 
@@ -227,7 +228,7 @@ void ray_trace(	scene_t *scene,
 		i = i - 1;
 		j = j - 1;
 
-		if (rays[i].curr != NULL)
+		if (rays[i].curr != -1)
 		{
 			if (j < RAY_DEPTH)
 			{
@@ -235,13 +236,13 @@ void ray_trace(	scene_t *scene,
 			}
 			else
 			{
-				ray_shade_f0(scene, &rays[i], NULL);
+				ray_shade_f0(scene, &rays[i], &no_ray);
 			}
 		}
 	}
 	while (i > 0);
 
-	if (rays[0].curr != NULL)
+	if (rays[0].curr != -1)
 	{
 		*c = rays[0].c;
 	}

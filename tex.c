@@ -127,6 +127,19 @@ static void bilerp(void *buf, int w, int h, const vec2_t *uv, vec3_t *s)
 	vec3_fma(s, &s1[0], fy, s);
 }
 
+vec3_t tex_sample_buf(const tex_t *tex, const vec2_t *uv, void *buf)
+{
+	vec3_t c;
+
+#ifdef BILERP
+		bilerp(buf, tex->w, tex->h, uv, &c);
+#else
+		nearest(buf, tex->w, tex->h, uv, &c);
+#endif
+
+	return c;
+}
+
 void tex_sample(const tex_t *tex, const vec2_t *uv,
 		vec3_t *c, vec3_t *n, real_t *r)
 {

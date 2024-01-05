@@ -1,23 +1,20 @@
 #ifndef BIH_H
 #define BIH_H
 
+#include "box.h"
+#include "scene.h"
 #include "vec.h"
 
 typedef __constant struct bih_struct	bih_t;
 typedef __constant struct prim_struct	prim_t;
-typedef __constant struct scene_struct	scene_t;
 
 struct bih_struct
 {
 	int		val;
-	union
-	{
-		real_t	clip[2];
-		int	num;
-	};
+	int		num;
+	box_t		box;
 };
 
-prim_t *bih_trace(	scene_t *scene, vec3_t *p, vec3_t *d,
-			real_t *m, prim_t *u);
+int	bih_trace(SCENE, vec3_t *p, vec3_t *d, real_t *m, int u);
 
 #endif
