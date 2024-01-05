@@ -198,32 +198,43 @@ static void copy_prim(	cl_context c, cl_command_queue q,
 	}
 }
 
-static void copy_bih(	bih_cl_t *bih_cl, bih_t *bih,
+static void build_bih(	bih_cl_t *bih_cl, bih_t *bih,
 			box_cl_t *box_cl,
 			scene_cl_t *scene_cl, const scene_t *scene)
 {
 	int	v	= bih->val >> 2;
 	int	a	= bih->val & 3;
 
-	bih_cl->val = bih->val;
-	bih_cl->num = bih->num;
 	bih_cl->box = *box_cl;
 
 	if (a != 3)
 	{
 		bih_t *		l_bih		= &scene->p_bih[v + 0];
-		bih_t *		r_bih		= &scene->p_bih[v + 1];
-		bih_cl_t *	l_bih_cl	= &scene_cl->p_bih[v + 0];
-		bih_cl_t *	r_bih_cl	= &scene_cl->p_bih[v + 1];
+		int		l_num_cl	= scene_cl->n_bih++;
+		bih_cl_t *	l_bih_cl	= &scene_cl->p_bih[l_num_cl];
 		box_cl_t	l_box_cl	= *box_cl;
-		box_cl_t	r_box_cl	= *box_cl;
 
 		l_box_cl.max[a] = bih->clip[0];
-		r_box_cl.min[a] = bih->clip[1];
+		build_bih(l_bih_cl, l_bih, &l_box_cl, scene_cl, scene);
 
-		copy_bih(l_bih_cl, l_bih, &l_box_cl, scene_cl, scene);
-		copy_bih(r_bih_cl, r_bih, &r_box_cl, scene_cl, scene);
+		bih_t *		r_bih		= &scene->p_bih[v + 1];
+		int		r_num_cl	= scene_cl->n_bih++;
+		bih_cl_t *	r_bih_cl	= &scene_cl->p_bih[r_num_cl];
+		box_cl_t	r_box_cl	= *box_cl;
+
+		r_box_cl.min[a] = bih->clip[1];
+		build_bih(r_bih_cl, r_bih, &r_box_cl, scene_cl, scene);
+
+		bih_cl->prim_num = 0;
+		bih_cl->prim_idx = 0;
 	}
+	else
+	{
+		bih_cl->prim_idx = v;
+		bih_cl->prim_num = bih->num;
+	}
+
+	bih_cl->next = scene_cl->n_bih;
 }
 
 static void copy_images(cl_context c, cl_command_queue q, scene_cl_t *scene_cl)
@@ -383,12 +394,12 @@ static void copy_scene(	cl_context c, cl_command_queue q,
 	}
 
 	{
-		scene_cl->n_bih = scene->n_bih;
+		scene_cl->n_bih = 1;
 		scene_cl->p_bih =
 			clmalloc(	c, q, sizeof(bih_cl_t) * scene->n_bih,
 					&scene_cl->m_bih);
 
-		copy_bih(	scene_cl->p_bih, scene->p_bih, scene_cl->p_box,
+		build_bih(	scene_cl->p_bih, scene->p_bih, scene_cl->p_box,
 				scene_cl, scene);
 
 		clunmap(c, q, scene_cl->p_bih, &scene_cl->m_bih);
