@@ -1,10 +1,10 @@
 #include "mat.h"
+#include "scene.h"
 #include "sph.h"
 #include "ray.h"
 #include "vec.h"
 
-real_t sph_trace(	const sph_t *sph, vec3_t *p, vec3_t *d,
-			real_t m, __constant void *prev)
+real_t sph_trace(const sph_t *sph, vec3_t *p, vec3_t *d, real_t m, bool prev)
 {
 	vec3_t o;
 	vec3_t v;
@@ -35,7 +35,7 @@ real_t sph_trace(	const sph_t *sph, vec3_t *p, vec3_t *d,
 	a = 1 - (sph->r - h) / sph->r;
 	a = sqrt(1 - a * a);
 
-	if (sph == prev)
+	if (prev)
 	{
 		/* Hit the back surface with transmission rays */
 		l = l + sph->r * a;
@@ -54,14 +54,14 @@ real_t sph_trace(	const sph_t *sph, vec3_t *p, vec3_t *d,
 	return l;
 }
 
-void sph_hit(const sph_t *sph, ray_t *ray)
+void sph_hit(SCENE, const sph_t *sph, ray_t *ray)
 {
 	ray->n = ray->q - sph->c;
 	ray->n = ray->n / sph->r;
 
 	ray->mat = sph->mat;
 
-	if (mat_has_tex(ray->mat))
+	if (mat_has_tex(MAT(ray->mat)))
 	{
 		ray->uv.x = 0.5 + asin(ray->n.x) / M_PI;
 		ray->uv.y = 0.5 + asin(ray->n.z) / M_PI;

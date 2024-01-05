@@ -4,25 +4,24 @@
 #include "scene.h"
 #include "vec.h"
 
-prim_t *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
+#if 0
+int bih_trace(SCENE, vec3_t *p, vec3_t *d, real_t *m, int u)
 {
-	int	nodes[2048];
-	box_t	boxes[2048];
+#define N 512
+	int	nodes[N];
 	int	n		= 1;
-	prim_t *t		= NULL;
+	int	t		= -1;
 	real_t	l		= INFINITY;
 
 	nodes[0] = 0;
-	boxes[0] = scene->box;
 
-	for (int i = 0; i < n; i++)
+	for (int i = 0; i != n; i = ((i + 1) & (N - 1)))
 	{
-		bih_t *	node	= &scene->p_bih[nodes[i]];
-		box_t *	box	= &boxes[i];
+		bih_t *	node	= BIH(nodes[i]);
 		int	a	= node->val & 3;
 		int	v	= node->val >> 2;
 
-		if (box_trace(box, p, d, l) == INFINITY)
+		if (box_trace(&node->box, p, d, l) == INFINITY)
 		{
 			continue;
 		}
@@ -32,21 +31,23 @@ prim_t *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
 			/* Leaf node */
 			for (int j = 0; j < node->num; j++)
 			{
-				prim_t *n_t = &scene->p_prim[v + j];
-				real_t	n_l = prim_trace(n_t, p, d, l, u);
+				prim_t *n_t = PRIM(v + j);
+				real_t	n_l = prim_trace(	scene, n_t,
+								p, d, l,
+								u == v + j);
 
 				if (n_l < l)
 				{
-					t = n_t;
+					t = v + j;
 					l = n_l;
 				}
 			}
 		}
 		else
 		{
-			real_t	dv	= 0;
 			int	l;
 			int	r;
+			real_t	dv	= 0;
 
 			switch (a)
 			{
@@ -57,22 +58,17 @@ prim_t *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
 
 			if (dv > 0)
 			{
-				l = n++;
-				r = n++;
+				l = (n++ & (N - 1));
+				r = (n++ & (N - 1));
 			}
 			else
 			{
-				r = n++;
-				l = n++;
+				r = (n++ & (N - 1));
+				l = (n++ & (N - 1));
 			}
 
 			nodes[l] = v + 0;
-			boxes[l] = *box;
-			boxes[l].max[a] = node->clip[0];
-
 			nodes[r] = v + 1;
-			boxes[r] = *box;
-			boxes[r].min[a] = node->clip[1];
 		}
 	}
 
@@ -80,3 +76,26 @@ prim_t *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)
 
 	return t;
 }
+#else
+int bih_trace(SCENE, vec3_t *p, vec3_t *d, real_t *m, int u)
+{
+	int	t	= -1;
+	real_t	l	= INFINITY;
+
+	for (int i = 0; i < scene_n_prim; i++)
+	{
+		prim_t *n_t = PRIM(i);
+		real_t	n_l = prim_trace(scene, n_t, p, d, l, u == i);
+
+		if (n_l < l)
+		{
+			t = i;
+			l = n_l;
+		}
+	}
+
+	*m = l;
+
+	return t;
+}
+#endif

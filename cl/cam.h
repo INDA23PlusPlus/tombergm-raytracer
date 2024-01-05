@@ -15,6 +15,7 @@ struct cam_struct
 	real_t	t;
 	real_t	b;
 	real_t	n;
+	char	_pad0[12];
 };
 
 #endif

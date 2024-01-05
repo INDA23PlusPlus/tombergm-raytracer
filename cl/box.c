@@ -1,7 +1,7 @@
 #include "box.h"
 #include "vec.h"
 
-real_t box_trace(const box_t *box, vec3_t *p, vec3_t *d, real_t m)
+real_t box_trace(__constant const box_t *box, vec3_t *p, vec3_t *d, real_t m)
 {
 	real_t l_ax = (box->min[0] - p->x) / d->x;
 	real_t l_bx = (box->max[0] - p->x) / d->x;

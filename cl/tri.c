@@ -1,15 +1,15 @@
 #include "mat.h"
+#include "scene.h"
 #include "tri.h"
 #include "ray.h"
 #include "vec.h"
 
-real_t tri_trace(	const tri_t *tri, vec3_t *p, vec3_t *d,
-			real_t m, __constant void *prev)
+real_t tri_trace(const tri_t *tri, vec3_t *p, vec3_t *d, real_t m, bool prev)
 {
 	vec3_t	q;
 	real_t	l;
 
-	if (tri == prev)
+	if (prev)
 	{
 		return INFINITY;
 	}
@@ -67,13 +67,13 @@ static void tri_map(const tri_t *tri, vec3_t *q, vec2_t *uv)
 	*uv = tri->at + st.x * tri->iv + st.y * tri->jv;
 }
 
-void tri_hit(const tri_t *tri, ray_t *ray)
+void tri_hit(SCENE, const tri_t *tri, ray_t *ray)
 {
 	ray->n = tri->n;
 
 	ray->mat = tri->mat;
 
-	if (mat_has_tex(ray->mat))
+	if (mat_has_tex(MAT(ray->mat)))
 	{
 		tri_map(tri, &ray->q, &ray->uv);
 
