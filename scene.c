@@ -8,9 +8,11 @@
 
 static tex_t tex[] =
 {
+	/* 0: Skybox */
 	{
 		.c = "./res/Daylight Box UV.png",
 	},
+	/* 1: Herringbone wood */
 	{
 		.c = "./res/wood_0018_color_4k.jpg",
 		.n = "./res/wood_0018_normal_opengl_4k.jpg",
@@ -20,6 +22,7 @@ static tex_t tex[] =
 
 static mat_t mat[] =
 {
+	/* 0: Sky */
 	{
 		.tex	= &tex[0],
 		.col	= { 1.0, 1.0, 1.0 },
@@ -30,6 +33,7 @@ static mat_t mat[] =
 		.ind	= 1.00,
 		.flg	= MAT_FLAT,
 	},
+	/* 1: Sun */
 	{
 		.col	= { 1.0, 1.0, 1.0 },
 		.dif	= 0.00,
@@ -38,6 +42,7 @@ static mat_t mat[] =
 		.tra	= 1.00,
 		.ind	= 1.00,
 	},
+	/* 2: Herringbone wood */
 	{
 		.tex	= &tex[1],
 		.col	= { 1.0, 1.0, 1.0 },
@@ -47,6 +52,7 @@ static mat_t mat[] =
 		.tra	= 0.00,
 		.ind	= 1.00,
 	},
+	/* 3: Red-tinted glass */
 	{
 		.col	= { 1.0, 0.5, 0.5 },
 		.dif	= 0.01,
@@ -55,6 +61,7 @@ static mat_t mat[] =
 		.tra	= 0.75,
 		.ind	= 1.20,
 	},
+	/* 4: Shiny gray metal */
 	{
 		.col	= { 0.4, 0.4, 0.4 },
 		.dif	= 0.20,
@@ -63,6 +70,7 @@ static mat_t mat[] =
 		.tra	= 0.00,
 		.ind	= 1.00,
 	},
+	/* 5: Clear glass */
 	{
 		.col	= { 1.0, 1.0, 1.0 },
 		.dif	= 0.00,
@@ -77,7 +85,7 @@ static tri_t tri[] =
 {
 #if 1
 #define L 100
-	/* Right */
+	/* Skybox right */
 	{
 		{  L,  L,  L },
 		{  L,  L, -L },
@@ -96,7 +104,7 @@ static tri_t tri[] =
 		{ 3. / 4., 1. / 3. },
 		{ 2. / 4., 1. / 3. },
 	},
-	/* Left */
+	/* Skybox left */
 	{
 		{ -L,  L, -L },
 		{ -L,  L,  L },
@@ -115,7 +123,7 @@ static tri_t tri[] =
 		{ 1. / 4., 1. / 3. },
 		{ 0. / 4., 1. / 3. },
 	},
-	/* Top */
+	/* Skybox top */
 	{
 		{ -L,  L, -L },
 		{  L,  L, -L },
@@ -134,7 +142,7 @@ static tri_t tri[] =
 		{ 2. / 4., 2. / 3. },
 		{ 1. / 4., 2. / 3. },
 	},
-	/* Bottom */
+	/* Skynox bottom */
 	{
 		{ -L, -L,  L },
 		{  L, -L,  L },
@@ -153,7 +161,7 @@ static tri_t tri[] =
 		{ 2. / 4., 0. / 3. },
 		{ 1. / 4., 0. / 3. },
 	},
-	/* Front */
+	/* Skybox front */
 	{
 		{ -L,  L,  L },
 		{  L,  L,  L },
@@ -172,7 +180,7 @@ static tri_t tri[] =
 		{ 2. / 4., 1. / 3. },
 		{ 1. / 4., 1. / 3. },
 	},
-	/* Back */
+	/* Skybox back */
 	{
 		{  L,  L, -L },
 		{ -L,  L, -L },
@@ -195,6 +203,7 @@ static tri_t tri[] =
 #endif
 
 #if 1
+	/* Wood floor */
 	{
 		{ -10,  -1,  10 },
 		{  10,  -1,  10 },
@@ -216,6 +225,7 @@ static tri_t tri[] =
 #endif
 
 #if 1
+	/* Red glass triangle */
 	{
 		{ -1, -1,  2 },
 		{  0,  1,  2 },
@@ -233,6 +243,7 @@ static tri_t tri[] =
 static sph_t sph[] =
 {
 #if 1
+	/* Sun */
 	{
 		{ -2.0,  7.0, -2.0 },
 		1.0,
@@ -241,11 +252,13 @@ static sph_t sph[] =
 #endif
 
 #if 1
+	/* Big transparent marble */
 	{
 		{  0.00, -0.50,  3.00 },
 		0.50,
 		&mat[4],
 	},
+	/* Shiny metal ball */
 	{
 		{  2.00, -0.25,  1.00 },
 		0.75,
