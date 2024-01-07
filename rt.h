@@ -3,6 +3,14 @@
 
 #include <stdio.h>
 
+typedef enum
+{
+	RT_NULL,
+	RT_ST,
+	RT_MT,
+	RT_CL,
+} rt_if_t;
+
 extern int	mouse_x;
 extern int	mouse_y;
 extern int	mouse_l;

@@ -12,25 +12,22 @@
 #include "vec.h"
 #include "vp.h"
 
-#define RT_CL
+#define CONFIG_MT
+#define CONFIG_CL
 
-#ifndef DEBUG
 #define N_THRD	4
-#else
-#define N_THRD	0
-#endif
 
-#define WIDTH	800
-#define HEIGHT	600
+#define WIDTH	1280
+#define HEIGHT	720
 
 extern scene_t		scene;
 
-#ifdef RT_CL
-static int		use_cl = 1;
-#else
-static int		use_cl = 0;
-#endif
+static rt_if_t		rt_if;
+static rt_if_t		rt_if_prev;
+
+#ifdef CONFIG_MT
 static render_task_t	rt_list[N_THRD];
+#endif
 
 static GLuint		fbo;
 static GLuint		tex;
@@ -39,6 +36,7 @@ static vec3_t		sb[WIDTH * HEIGHT];
 static int		sn;
 
 static real_t		r;
+static real_t		p;
 static cam_t		cam;
 static vp_t		vp;
 static char		keys[256];
@@ -107,11 +105,67 @@ exit:
 	return ret;
 }
 
+static void rt_finish(void)
+{
+	switch (rt_if_prev)
+	{
+#ifdef CONFIG_MT
+		case RT_MT:
+		{
+			render_task_wait(rt_list, N_THRD);
+		}	break;
+#endif
+
+#ifdef CONFIG_CL
+		case RT_CL:
+		{
+			clrender_wait();
+		}	break;
+#endif
+
+		default:
+			break;
+	}
+
+	rt_if_prev = RT_NULL;
+}
+
+static void rt_commit(void)
+{
+	switch (rt_if)
+	{
+		case RT_ST:
+		{
+			render(&scene, &cam, &vp, pb, sb, sn);
+		}	break;
+
+#ifdef CONFIG_MT
+		case RT_MT:
+		{
+			render_task_commit(	rt_list, N_THRD, &scene,
+						&cam, &vp, pb, sb, sn);
+		}	break;
+#endif
+
+#ifdef CONFIG_CL
+		case RT_CL:
+		{
+			clrender_commit(&scene, &cam, &vp, pb, sb, sn);
+		}	break;
+#endif
+
+		default:
+			break;
+	}
+
+	rt_if_prev = rt_if;
+}
+
 static void update(void)
 {
 	if (keys[GLUT_KEY_LEFT])
 	{
-		if (keys[GLUT_KEY_CTRL_L] || keys[GLUT_KEY_CTRL_R])
+		if (keys[GLUT_KEY_SHIFT_L] || keys[GLUT_KEY_SHIFT_R])
 		{
 			cam.p.x = cam.p.x - cam.fv.z * 0.1;
 			cam.p.z = cam.p.z + cam.fv.x * 0.1;
@@ -124,7 +178,7 @@ static void update(void)
 
 	if (keys[GLUT_KEY_RIGHT])
 	{
-		if (keys[GLUT_KEY_CTRL_L] || keys[GLUT_KEY_CTRL_R])
+		if (keys[GLUT_KEY_SHIFT_L] || keys[GLUT_KEY_SHIFT_R])
 		{
 			cam.p.x = cam.p.x + cam.fv.z * 0.1;
 			cam.p.z = cam.p.z - cam.fv.x * 0.1;
@@ -135,8 +189,23 @@ static void update(void)
 		}
 	}
 
-	cam.fv.z = cos(r);
-	cam.fv.x = sin(r);
+	if (keys['Z'])
+	{
+		p = p + 0.1;
+	}
+
+	if (keys['X'])
+	{
+		p = p - 0.1;
+	}
+
+	cam.fv.x = sin(r) * cos(p);
+	cam.fv.y = sin(p);
+	cam.fv.z = cos(r) * cos(p);
+
+	cam.uv.x = sin(r) * -sin(p);
+	cam.uv.y = cos(p);
+	cam.uv.z = cos(r) * -sin(p);
 
 	if (keys[GLUT_KEY_UP])
 	{
@@ -146,6 +215,16 @@ static void update(void)
 	if (keys[GLUT_KEY_DOWN])
 	{
 		vec3_fma(&cam.p, &cam.p, -0.1, &cam.fv);
+	}
+
+	if (keys[' '])
+	{
+		cam.p.y = cam.p.y + 0.1;
+	}
+
+	if (keys[GLUT_KEY_CTRL_L] || keys[GLUT_KEY_CTRL_R])
+	{
+		cam.p.y = cam.p.y - 0.1;
 	}
 }
 
@@ -190,18 +269,7 @@ static void display_func(void)
 		time_set = 1;
 	}
 
-	if (use_cl)
-	{
-		clrender_wait();
-	}
-	else if (N_THRD != 0)
-	{
-		render_task_wait(rt_list, N_THRD);
-	}
-	else
-	{
-		render(&scene, &cam, &vp, pb, sb, sn);
-	}
+	rt_finish();
 
 	update();
 
@@ -223,15 +291,7 @@ static void display_func(void)
 		glutPostRedisplay();
 	}
 
-	if (use_cl)
-	{
-		clrender_commit(&scene, &cam, &vp, pb, sb, sn);
-	}
-	else if (N_THRD != 0)
-	{
-		render_task_commit(	rt_list, N_THRD, &scene, &cam, &vp,
-					pb, sb, sn);
-	}
+	rt_commit();
 
 	{
 		char t[64];
@@ -276,7 +336,14 @@ static void mouse_func(int bn, int st, int x, int y)
 
 static void keyboard_func(unsigned char key, int x, int y)
 {
-	if (key == 'S' || key == 's')
+	if (key >= 'a' && key <= 'z')
+	{
+		key = key + ('A' - 'a');
+	}
+
+	keys[key] = 1;
+
+	if (key == 'S')
 	{
 		export();
 	}
@@ -295,6 +362,16 @@ static void keyboard_func(unsigned char key, int x, int y)
 	{
 		glutLeaveMainLoop();
 	}
+}
+
+static void keyboard_up_func(unsigned char key, int x, int y)
+{
+	if (key >= 'a' && key <= 'z')
+	{
+		key = key + ('A' - 'a');
+	}
+
+	keys[key] = 0;
 }
 
 static void special_func(int key, int x, int y)
@@ -331,41 +408,41 @@ int main(int argc, char *argv[])
 
 	scene_init(&scene);
 
-	if (use_cl)
+#ifdef CONFIG_CL
+	if (clrender_init(&scene, pb, &vp) == 0)
 	{
-		if (clrender_init(&scene, pb, &vp) != 0)
-		{
-			use_cl = 0;
+		rt_if = RT_CL;
+	}
+	else
+	{
+		fprintf(stderr, "OpenCL unavailable\n");
+	}
+#endif
 
-			fprintf(stderr, "OpenCL unavailable\n");
-		}
+#ifdef CONFIG_MT
+	render_task_init(rt_list, N_THRD);
+
+	if (rt_if == RT_NULL)
+	{
+		fprintf(stderr,
+			"Using CPU rendering with %i threads\n",
+			N_THRD);
+
+		rt_if = RT_MT;
+	}
+#endif
+
+	if (rt_if == RT_NULL)
+	{
+		fprintf(stderr,
+			"Using single-threaded CPU rendering\n");
+
+		rt_if = RT_ST;
 	}
 
-	if (!use_cl)
+	if (rt_if != RT_ST)
 	{
-		if (N_THRD != 0)
-		{
-			render_task_init(rt_list, N_THRD);
-
-			fprintf(stderr,
-				"Using CPU rendering with %i threads\n",
-				N_THRD);
-		}
-		else
-		{
-			fprintf(stderr,
-				"Using single-threaded CPU rendering\n");
-		}
-	}
-
-	if (use_cl)
-	{
-		clrender_commit(&scene, &cam, &vp, pb, sb, sn);
-	}
-	else if (N_THRD != 0)
-	{
-		render_task_commit(	rt_list, N_THRD, &scene, &cam, &vp,
-					pb, sb, sn);
+		rt_commit();
 	}
 
 	{
@@ -388,25 +465,18 @@ int main(int argc, char *argv[])
 		glutPassiveMotionFunc(motion_func);
 		glutMouseFunc(mouse_func);
 		glutKeyboardFunc(keyboard_func);
+		glutKeyboardUpFunc(keyboard_up_func);
 		glutSpecialFunc(special_func);
 		glutSpecialUpFunc(special_up_func);
 
 		glutMainLoop();
 	}
 
-	if (use_cl)
-	{
-		clrender_wait();
-	}
-	else if (N_THRD != 0)
-	{
-		render_task_wait(rt_list, N_THRD);
-	}
+	rt_finish();
 
-	if (!use_cl && N_THRD != 0)
-	{
-		render_task_dstr(rt_list, N_THRD);
-	}
+#ifdef CONFIG_MT
+	render_task_dstr(rt_list, N_THRD);
+#endif
 
 	scene_dstr(&scene);
 }
