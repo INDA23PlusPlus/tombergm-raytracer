@@ -1,20 +1,19 @@
 #include "bih.h"
 #include "box.h"
 #include "prim.h"
+#include "ray.h"
 #include "scene.h"
 #include "vec.h"
 
-int bih_trace(SCENE, vec3_t *p, vec3_t *d, real_t *m, int u)
+void bih_trace(SCENE, ray_t *ray)
 {
-	int	i	= 0;
-	int	t	= -1;
-	real_t	l	= INFINITY;
+	int i = 0;
 
 	while (i != scene_n_bih)
 	{
 		bih_t *	bih = BIH(i);
 
-		if (box_trace(&bih->box, p, d, l) == INFINITY)
+		if (box_trace(&bih->box, ray) == INFINITY)
 		{
 			i = bih->next;
 		}
@@ -22,23 +21,20 @@ int bih_trace(SCENE, vec3_t *p, vec3_t *d, real_t *m, int u)
 		{
 			for (int j = 0; j < bih->prim_num; j++)
 			{
-				int	k = bih->prim_idx + j;
-				real_t	m;
+				int	t = bih->prim_idx + j;
+				real_t	l;
 
-				m = prim_trace(scene, PRIM(k), p, d, l, u == k);
+				l = prim_trace(	scene, PRIM(t), ray,
+						t == ray->prev);
 
-				if (l > m)
+				if (ray->l > l)
 				{
-					t = k;
-					l = m;
+					ray->curr = t;
+					ray->l = l;
 				}
 			}
 
 			i++;
 		}
 	}
-
-	*m = l;
-
-	return t;
 }

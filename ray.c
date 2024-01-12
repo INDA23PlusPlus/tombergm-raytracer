@@ -9,7 +9,7 @@
 #include "tex.h"
 #include "vec.h"
 
-#define RAY_DEPTH 8
+#define RAY_DEPTH 32
 
 static void ray_shade(scene_t *scene, ray_t *ray)
 {

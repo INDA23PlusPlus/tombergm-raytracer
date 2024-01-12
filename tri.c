@@ -82,6 +82,15 @@ void tri_precomp(tri_t *tri)
 		vec3_norm(&tv, &tv);
 	}
 
+	if (	tri->an.x == 0 && tri->an.y == 0 && tri->an.z == 0	&&
+		tri->bn.x == 0 && tri->bn.y == 0 && tri->bn.z == 0	&&
+		tri->cn.x == 0 && tri->cn.y == 0 && tri->cn.z == 0	)
+	{
+		tri->an = n;
+		tri->bn = n;
+		tri->cn = n;
+	}
+
 	tri->n	= n;
 	tri->i	= i;
 	tri->j	= j;

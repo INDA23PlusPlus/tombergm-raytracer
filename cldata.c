@@ -146,6 +146,10 @@ static void copy_tri(	cl_context c, cl_command_queue q,
 	copy_vec2(&tri_cl->bt, &tri->bt);
 	copy_vec2(&tri_cl->ct, &tri->ct);
 
+	copy_vec3(&tri_cl->an, &tri->an);
+	copy_vec3(&tri_cl->bn, &tri->bn);
+	copy_vec3(&tri_cl->cn, &tri->cn);
+
 	copy_vec3(&tri_cl->n, &tri->n);
 	copy_vec3(&tri_cl->i, &tri->i);
 	copy_vec3(&tri_cl->j, &tri->j);

@@ -37,7 +37,7 @@ static mat_t mat[] =
 	{
 		.col	= { 1.0, 1.0, 1.0 },
 		.dif	= 0.00,
-		.amb	= 100.,
+		.amb	= 80.,
 		.ref	= 0.00,
 		.tra	= 1.00,
 		.ind	= 1.00,
@@ -237,7 +237,7 @@ static tri_t tri[] =
 	},
 #endif
 
-#include "mdl.c"
+//#include "mdl/glass-cup.c"
 };
 
 static sph_t sph[] =

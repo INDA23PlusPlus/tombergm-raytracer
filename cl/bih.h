@@ -7,6 +7,7 @@
 
 typedef __constant struct bih_struct	bih_t;
 typedef __constant struct prim_struct	prim_t;
+typedef struct ray_struct		ray_t;
 
 struct bih_struct
 {
@@ -16,6 +17,6 @@ struct bih_struct
 	int		prim_num;
 };
 
-int	bih_trace(SCENE, vec3_t *p, vec3_t *d, real_t *m, int u);
+void	bih_trace(SCENE, ray_t *ray);
 
 #endif

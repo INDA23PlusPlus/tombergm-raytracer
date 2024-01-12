@@ -5,15 +5,12 @@
 #include "tri.h"
 #include "vec.h"
 
-real_t prim_trace(	SCENE, const prim_t *prim, vec3_t *p, vec3_t *d,
-			real_t m, bool prev)
+real_t prim_trace(SCENE, const prim_t *prim, ray_t *ray, bool prev)
 {
 	switch (prim->type)
 	{
-		case PRIM_TRI	: return tri_trace(	TRI(prim->idx), p, d,
-							m, prev);
-		case PRIM_SPH	: return sph_trace(	SPH(prim->idx), p, d,
-							m, prev);
+		case PRIM_TRI	: return tri_trace(TRI(prim->idx), ray, prev);
+		case PRIM_SPH	: return sph_trace(SPH(prim->idx), ray, prev);
 		default		: return INFINITY;
 	}
 }

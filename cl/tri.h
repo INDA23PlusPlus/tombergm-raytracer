@@ -21,6 +21,10 @@ struct tri_struct
 	vec2_t		bt;
 	vec2_t		ct;
 
+	vec3_t		an;
+	vec3_t		bn;
+	vec3_t		cn;
+
 	/* Precomputed values */
 	struct
 	{
@@ -43,7 +47,7 @@ struct tri_struct
 	};
 };
 
-real_t	tri_trace(const tri_t *tri, vec3_t *p, vec3_t *d, real_t m, bool prev);
+real_t	tri_trace(const tri_t *tri, ray_t *ray, bool prev);
 void	tri_hit(SCENE, const tri_t *tri, ray_t *ray);
 
 #endif

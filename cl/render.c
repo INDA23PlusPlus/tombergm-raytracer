@@ -25,6 +25,7 @@ void render(	__global unsigned char *pb, __global vec3_t *sb,
 	rand =	(rand ^ x) * (y + 1);
 	rand =	((rand << (((y + 1) * (x + 1)) & 31))		|
 		(rand >> (32 - (((y + 1) * (x + 1)) & 31))))	;
+	rand = rand + *(int *) &sb[y * w + x] * sn;
 
 	{
 		__global

@@ -4,7 +4,7 @@
 #include "ray.h"
 #include "vec.h"
 
-real_t sph_trace(const sph_t *sph, vec3_t *p, vec3_t *d, real_t m, bool prev)
+real_t sph_trace(const sph_t *sph, ray_t *ray, bool prev)
 {
 	vec3_t o;
 	vec3_t v;
@@ -13,8 +13,8 @@ real_t sph_trace(const sph_t *sph, vec3_t *p, vec3_t *d, real_t m, bool prev)
 	real_t l;
 	real_t a;
 
-	o = sph->c - *p;
-	l = dot(o, *d);
+	o = sph->c - ray->p;
+	l = dot(o, ray->d);
 
 	if (l <= 0)
 	{
@@ -22,7 +22,7 @@ real_t sph_trace(const sph_t *sph, vec3_t *p, vec3_t *d, real_t m, bool prev)
 		return INFINITY;
 	}
 
-	v = l * *d;
+	v = l * ray->d;
 	w = v - o;
 	h = length(w);
 
@@ -46,7 +46,7 @@ real_t sph_trace(const sph_t *sph, vec3_t *p, vec3_t *d, real_t m, bool prev)
 		l = l - sph->r * a;
 	}
 
-	if (0 >= l || l >= m)
+	if (0 >= l || l >= ray->l)
 	{
 		return INFINITY;
 	}

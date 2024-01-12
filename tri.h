@@ -20,6 +20,10 @@ struct tri_struct
 	vec2_t		bt;
 	vec2_t		ct;
 
+	vec3_t		an;
+	vec3_t		bn;
+	vec3_t		cn;
+
 	/* Precomputed values */
 	struct
 	{

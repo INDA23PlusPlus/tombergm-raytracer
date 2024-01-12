@@ -18,7 +18,7 @@ struct sph_struct
 	char		_pad0[8];
 };
 
-real_t	sph_trace(const sph_t *sph, vec3_t *p, vec3_t *d, real_t m, bool prev);
+real_t	sph_trace(const sph_t *sph, ray_t *ray, bool prev);
 void	sph_hit(SCENE, const sph_t *sph, ray_t *ray);
 
 #endif

@@ -3,7 +3,8 @@
 
 #include "vec.h"
 
-typedef struct box_struct	box_t;
+typedef struct box_struct		box_t;
+typedef struct ray_struct		ray_t;
 
 struct box_struct
 {
@@ -11,6 +12,6 @@ struct box_struct
 	real_t	max[3];
 };
 
-real_t	box_trace(__constant const box_t *box, vec3_t *p, vec3_t *d, real_t m);
+real_t	box_trace(__constant const box_t *box, ray_t *ray);
 
 #endif

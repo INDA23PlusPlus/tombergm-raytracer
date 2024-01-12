@@ -6,7 +6,7 @@
 #include "tex.h"
 #include "vec.h"
 
-#define RAY_DEPTH 8
+#define RAY_DEPTH 32
 
 static void ray_trace_f0(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 {
@@ -16,7 +16,7 @@ static void ray_trace_f0(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 	ray->d = normalize(ray->d);
 	ray->l = INFINITY;
 
-	ray->curr = bih_trace(scene, &ray->p, &ray->d, &ray->l, ray->prev);
+	bih_trace(scene, ray);
 
 	if (ray->curr == -1)
 	{

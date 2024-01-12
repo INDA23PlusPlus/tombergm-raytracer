@@ -18,8 +18,7 @@ struct prim_struct
 	int	idx;
 };
 
-real_t	prim_trace(	SCENE, const prim_t *prim, vec3_t *p, vec3_t *d,
-			real_t m, bool prev);
+real_t	prim_trace(SCENE, const prim_t *prim, ray_t *ray, bool prev);
 void	prim_hit(SCENE, const prim_t *prim, ray_t *ray);
 
 #endif

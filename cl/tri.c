@@ -4,7 +4,7 @@
 #include "ray.h"
 #include "vec.h"
 
-real_t tri_trace(const tri_t *tri, vec3_t *p, vec3_t *d, real_t m, bool prev)
+real_t tri_trace(const tri_t *tri, ray_t *ray, bool prev)
 {
 	vec3_t	q;
 	real_t	l;
@@ -14,15 +14,15 @@ real_t tri_trace(const tri_t *tri, vec3_t *p, vec3_t *d, real_t m, bool prev)
 		return INFINITY;
 	}
 
-	l = dot(tri->a, tri->n) - dot(*p, tri->n);
-	l = l / dot(*d, tri->n);
+	l = dot(tri->a, tri->n) - dot(ray->p, tri->n);
+	l = l / dot(ray->d, tri->n);
 
-	if (0 >= l || l >= m)
+	if (0 >= l || l >= ray->l)
 	{
 		return INFINITY;
 	}
 
-	q = *p + l * *d;
+	q = ray->p + l * ray->d;
 
 	{
 		real_t	x	= dot(q, tri->i);
@@ -44,6 +44,8 @@ real_t tri_trace(const tri_t *tri, vec3_t *p, vec3_t *d, real_t m, bool prev)
 			/* Intersection lies outside triangle */
 			return INFINITY;
 		}
+
+		ray->n = l_1 * tri->an + l_2 * tri->bn + l_3 * tri->cn;
 	}
 
 	return l;
@@ -69,8 +71,6 @@ static void tri_map(const tri_t *tri, vec3_t *q, vec2_t *uv)
 
 void tri_hit(SCENE, const tri_t *tri, ray_t *ray)
 {
-	ray->n = tri->n;
-
 	ray->mat = tri->mat;
 
 	if (mat_has_tex(MAT(ray->mat)))

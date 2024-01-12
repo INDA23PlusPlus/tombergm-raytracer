@@ -64,6 +64,10 @@ typedef struct
 	vec2_cl_t		bt;
 	vec2_cl_t		ct;
 
+	vec3_cl_t		an;
+	vec3_cl_t		bn;
+	vec3_cl_t		cn;
+
 	struct
 	{
 		vec3_cl_t	n;
