@@ -6,62 +6,16 @@
 #include "tex.h"
 #include "vec.h"
 
-#define RAY_DEPTH 32
+#define RAY_DEPTH 8
 
-static void ray_trace_f0(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
+static void trace_reg(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 {
-	float n_cos;
-	float n_sin_sq;
-
-	ray->d = normalize(ray->d);
-	ray->l = INFINITY;
-
-	bih_trace(scene, ray);
-
-	if (ray->curr == -1)
-	{
-		/* Nothing hit */
-		return;
-	}
-
-	ray->q = ray->p + ray->l * ray->d;
-
-	prim_hit(scene, PRIM(ray->curr), ray);
-
-	ray->c = 0;
-	ray->tc = 1;
-	ray->tr = 1;
-
-	if (mat_has_tex(MAT(ray->mat)))
-	{
-		vec3_t tn;
-
-		tex_sample(	scene, TEX(MAT(ray->mat)->tex), &ray->uv,
-				&ray->tc, &tn, &ray->tr);
-
-		if (tex_has_n(TEX(MAT(ray->mat)->tex)))
-		{
-			ray->n = tn.z * ray->n;
-			ray->n = ray->n + tn.x * ray->tu;
-			ray->n = ray->n + tn.y * ray->tv;
-			ray->n = normalize(ray->n);
-		}
-	}
-
-	ray->tc = ray->tc * MAT(ray->mat)->col;
-
-	if ((MAT(ray->mat)->flg & MAT_FLAT) != 0 || rec->curr != -1)
-	{
-		/* No recursive rays */
-		return;
-	}
-
-	n_cos = dot(ray->d, ray->n);
-
-	float ref_rc = MAT(ray->mat)->ref;
-	float tra_rc = ray->tr;
-	float ind;
-	float R;
+	real_t n_sin_sq;
+	real_t n_cos	= dot(ray->d, ray->n);
+	real_t ref_rc	= MAT(ray->mat)->ref;
+	real_t tra_rc	= ray->tr;
+	real_t ind;
+	real_t R;
 
 	if (n_cos < 0)
 	{
@@ -74,7 +28,7 @@ static void ray_trace_f0(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 
 	{
 		/* Fresnel equation for non-magnetic reflectivity */
-		float b = ind * ind + n_cos * n_cos - 1;
+		real_t b = ind * ind + n_cos * n_cos - 1;
 
 		if (b < 0)
 		{
@@ -121,12 +75,163 @@ static void ray_trace_f0(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 	}
 }
 
-static void ray_shade_f0(SCENE, ray_t *ray, ray_t *rec)
+static void trace_bsdf(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
+{
+	real_t n_cos;
+	real_t r = MAT(ray->mat)->dif * ray->tr;
+	real_t ind;
+
+	r = min2(0.01f, r);
+
+	vec3_t N = ray->n;
+	vec3_t V = -ray->d;
+	vec3_t M;
+
+	{
+		/* Microfacet, GGX */
+		real_t a = flt_rand(rand) * M_PI * 2;
+		real_t k = flt_rand(rand);
+		real_t c = sqrt(max(0.f, (1 - k) / (1 + (r * r - 1) * k)));
+		real_t s = sqrt(max(0.f, 1 - c * c));
+		vec3_t u;
+		vec3_t v;
+
+		vec3_perp(&u, &N);
+		v = cross(u, N);
+
+		M = cos(a) * s * u + sin(a) * s * v + N * c;
+	}
+
+	vec3_t L = normalize(2.f * dot(V, M) * M - V);
+
+	real_t NdotV = dot(N, V);
+	real_t NdotL = dot(N, L);
+	real_t NdotM = dot(N, M);
+	real_t LdotM = dot(L, M);
+
+	if (NdotV < 0 || NdotL < 0 || NdotM < 0 || LdotM < 0)
+	{
+		return;
+	}
+
+	real_t G;
+	real_t F;
+
+	{
+		/* Geometric masking term, Schlick / Karis */
+		real_t k = r * r / 2;
+
+		G =	(NdotV * (NdotL * (1 - k) + k))	/
+			(NdotL * (NdotV * (1 - k) + k))	;
+	}
+
+	if (n_cos < 0)
+	{
+		ind = MAT(ray->mat)->ind;
+	}
+	else
+	{
+		ind = 1. / MAT(ray->mat)->ind;
+	}
+
+	{
+#if 0
+		/* Fresnel */
+		real_t b = ind * ind + LdotM * LdotM - 1;
+
+		if (b < 0)
+		{
+			/* Total internal reflection */
+			F = 0;
+		}
+		else
+		{
+			b = sqrt(b);
+			F = (LdotM - b) / (LdotM + b);
+			F = F * F;
+		}
+#else
+		real_t n = 0.239;
+		real_t k = 3.416;
+		real_t i = n * n - k * k - (1 - LdotM * LdotM);
+		real_t j = sqrt(i * i + 4 * n * n * k * k);
+		real_t a = i + j;
+		real_t b = i - j;
+		i = (a + b) / 2 + LdotM * LdotM;
+		j = sqrt(a) * LdotM;
+		F = (i - j) / (i + j);
+#endif
+	}
+
+	{
+		/* Reflection */
+		rec->prev = ray->curr;
+		rec->p = ray->q;
+		rec->d = L;
+
+		ray->rc = G * F * LdotM / (NdotV * NdotM);
+	}
+}
+
+static void trace(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
+{
+	ray->d = normalize(ray->d);
+	ray->l = INFINITY;
+
+	bih_trace(scene, ray);
+
+	if (ray->curr == PRIM_NULL)
+	{
+		/* Nothing hit */
+		return;
+	}
+
+	ray->q = ray->p + ray->l * ray->d;
+
+	prim_hit(scene, PRIM(ray->curr), ray);
+
+	ray->c = 0;
+	ray->tc = 1;
+	ray->tr = 1;
+
+	if (mat_has_tex(MAT(ray->mat)))
+	{
+		vec3_t tn;
+
+		tex_sample(	scene, TEX(MAT(ray->mat)->tex), &ray->uv,
+				&ray->tc, &tn, &ray->tr);
+
+		if (tex_has_n(TEX(MAT(ray->mat)->tex)))
+		{
+			ray->n = tn.z * ray->n;
+			ray->n = ray->n + tn.x * ray->tu;
+			ray->n = ray->n + tn.y * ray->tv;
+			ray->n = normalize(ray->n);
+		}
+	}
+
+	ray->tc = ray->tc * MAT(ray->mat)->col;
+
+	if ((MAT(ray->mat)->flg & MAT_FLAT) != 0 || rec->curr != PRIM_NULL)
+	{
+		/* No recursive rays */
+		return;
+	}
+
+	switch (MAT(ray->mat)->sha)
+	{
+		case 0	: trace_reg	(scene, ray, rec, rand);	break;
+		case 1	: trace_bsdf	(scene, ray, rec, rand);	break;
+		default	:						break;
+	}
+}
+
+static void shade(SCENE, ray_t *ray, ray_t *rec)
 {
 	const mat_t *mat = MAT(ray->mat);
 
 	/* Recursive ray */
-	if (rec->prev != -1)
+	if (rec->prev != PRIM_NULL)
 	{
 		ray->c = ray->c + ray->rc * rec->c;
 	}
@@ -163,23 +268,6 @@ static void ray_shade_f0(SCENE, ray_t *ray, ray_t *rec)
 		}
 	}
 #endif
-
-#if 0
-	/* Attenuation */
-	if ((mat->flg & MAT_FLAT) == 0)
-	{
-		vec3_t r = ray->q - ray->p;
-		real_t m = 100;
-		real_t a = m / dot(r, r);
-
-		if (a > 1)
-		{
-			a = 1;
-		}
-
-		ray->c = a * ray->c;
-	}
-#endif
 }
 
 void ray_trace(SCENE, vec3_t *c, vec3_t *p, vec3_t *d, unsigned *rand)
@@ -189,16 +277,16 @@ void ray_trace(SCENE, vec3_t *c, vec3_t *p, vec3_t *d, unsigned *rand)
 	int	i;
 	int	j;
 
-	no_ray.prev = -1;
+	no_ray.prev = PRIM_NULL;
 	no_ray.curr = 0;
 
 	for (i = 0; i < RAY_DEPTH; i++)
 	{
-		rays[i].curr = -1;
-		rays[i].prev = -1;
+		rays[i].curr = PRIM_NULL;
+		rays[i].prev = PRIM_NULL;
 	}
 
-	rays[0].prev	= -2;
+	rays[0].prev	= scene_n_prim;
 	rays[0].p	= *p;
 	rays[0].d	= *d;
 
@@ -207,15 +295,15 @@ void ray_trace(SCENE, vec3_t *c, vec3_t *p, vec3_t *d, unsigned *rand)
 
 	while (i < RAY_DEPTH)
 	{
-		if (rays[i].prev != -1)
+		if (rays[i].prev != PRIM_NULL)
 		{
 			if (j < RAY_DEPTH)
 			{
-				ray_trace_f0(scene, &rays[i], &rays[j], rand);
+				trace(scene, &rays[i], &rays[j], rand);
 			}
 			else
 			{
-				ray_trace_f0(scene, &rays[i], &no_ray, rand);
+				trace(scene, &rays[i], &no_ray, rand);
 			}
 		}
 
@@ -228,21 +316,21 @@ void ray_trace(SCENE, vec3_t *c, vec3_t *p, vec3_t *d, unsigned *rand)
 		i = i - 1;
 		j = j - 1;
 
-		if (rays[i].curr != -1)
+		if (rays[i].curr != PRIM_NULL)
 		{
 			if (j < RAY_DEPTH)
 			{
-				ray_shade_f0(scene, &rays[i], &rays[j]);
+				shade(scene, &rays[i], &rays[j]);
 			}
 			else
 			{
-				ray_shade_f0(scene, &rays[i], &no_ray);
+				shade(scene, &rays[i], &no_ray);
 			}
 		}
 	}
 	while (i > 0);
 
-	if (rays[0].curr != -1)
+	if (rays[0].curr != PRIM_NULL)
 	{
 		*c = rays[0].c;
 	}

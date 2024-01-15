@@ -243,9 +243,9 @@ void bih_build(scene_t *scene)
 	scene->n_bih = bih_vec.num;
 	scene->p_bih = bih_vec.buf;
 
-	fprintf(stderr, "Nodes: %i\n", bih_vec.num);
-	fprintf(stderr, "Max depth: %i\n", check_depth(&bih_vec, 0));
-	fprintf(stderr, "Max leaf size: %i\n", check_size(&bih_vec, 0));
+	fprintf(stderr, "Nodes           : %i\n", bih_vec.num);
+	fprintf(stderr, "Max depth       : %i\n", check_depth(&bih_vec, 0));
+	fprintf(stderr, "Max leaf size   : %i\n", check_size(&bih_vec, 0));
 }
 
 prim_t *bih_trace(scene_t *scene, vec3_t *p, vec3_t *d, real_t *m, prim_t *u)

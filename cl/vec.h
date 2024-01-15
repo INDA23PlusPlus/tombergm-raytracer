@@ -11,6 +11,7 @@ typedef float3	vec3_t;
 #define max3(a, b, c)	max2(a, max2(b, c))
 
 void	vec3_diffuse(vec3_t *r, const vec3_t *n, real_t a, unsigned *rand);
+void	vec3_perp(vec3_t *r, const vec3_t *a);
 
 static inline real_t flt_rand(unsigned *rand)
 {

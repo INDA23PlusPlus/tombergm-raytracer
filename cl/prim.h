@@ -4,6 +4,7 @@
 #include "scene.h"
 #include "vec.h"
 
+#define PRIM_NULL	-1
 #define PRIM_TRI	0
 #define PRIM_SPH	1
 

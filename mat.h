@@ -12,6 +12,7 @@ typedef struct tex_struct	tex_t;
 struct mat_struct
 {
 	const tex_t *	tex;
+	int		sha;
 	vec3_t		col;
 	real_t		dif;
 	real_t		amb;

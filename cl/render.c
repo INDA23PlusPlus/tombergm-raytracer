@@ -21,6 +21,7 @@ void render(	__global unsigned char *pb, __global vec3_t *sb,
 	real_t	t	= cam->t;
 	real_t	b	= cam->b;
 	real_t	n	= cam->n;
+	real_t	ap	= cam->ap;
 
 	rand =	(rand ^ x) * (y + 1);
 	rand =	((rand << (((y + 1) * (x + 1)) & 31))		|
@@ -31,6 +32,7 @@ void render(	__global unsigned char *pb, __global vec3_t *sb,
 		__global
 		unsigned char *	pix	= &pb[(y * w + x) * 4];
 		vec3_t		c	= 0;
+		vec3_t		q;
 		vec3_t		d;
 		real_t		rs	= l + x * (r - l) / (w - 1);
 		real_t		us	= b + y * (t - b) / (h - 1);
@@ -39,7 +41,15 @@ void render(	__global unsigned char *pb, __global vec3_t *sb,
 		rs = rs + (r - l) / (w - 1) * (0.5 - flt_rand(&rand));
 		us = us + (t - b) / (h - 1) * (0.5 - flt_rand(&rand));
 
-		d = normalize(rs * rv + us * uv + fs * fv);
+		q = p + rs * rv + us * uv + fs * fv;
+
+		{
+			real_t l = ap * sqrt(flt_rand(&rand));
+			real_t r = flt_rand(&rand) * 2 * M_PI;
+			p = p + l * (cos(r) * rv + sin(r) * uv);
+		}
+
+		d = normalize(q - p);
 
 		ray_trace(scene, &c, &p, &d, &rand);
 

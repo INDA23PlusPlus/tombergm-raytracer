@@ -4,6 +4,8 @@
 #include "scene.h"
 #include "vec.h"
 
+#define TEX_NULL	-1
+
 typedef __constant struct tex_struct	tex_t;
 
 struct tex_struct
@@ -17,12 +19,12 @@ struct tex_struct
 
 static inline int tex_has_n(const tex_t *tex)
 {
-	return tex->n != -1;
+	return tex->n != TEX_NULL;
 }
 
 static inline int tex_has_r(const tex_t *tex)
 {
-	return tex->r != -1;
+	return tex->r != TEX_NULL;
 }
 
 void	tex_sample(	SCENE, const tex_t *tex, const vec2_t *uv,

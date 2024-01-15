@@ -28,3 +28,14 @@ void vec3_diffuse(vec3_t *r, const vec3_t *n, real_t a, unsigned *rand)
 	*r = cos(a) * *n;
 	*r = *r + sin(a) * m;
 }
+
+void vec3_perp(vec3_t *r, const vec3_t *a)
+{
+	vec3_t b;
+
+	b.x = max2(a->y, a->z);
+	b.y = min2(a->x, a->z);
+	b.z = max2(a->x, a->y);
+
+	*r = normalize(cross(*a, b));
+}

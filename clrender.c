@@ -24,7 +24,6 @@ static cl_int		sn_cl;
 static cl_mem		mem_pb;
 static cl_mem		mem_sb;
 static cl_mem		mem_cam;
-static cl_mem		mem_scene;
 
 static const char *	src =
 {
@@ -62,7 +61,7 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 		clGetDeviceInfo(dev[DEV], CL_DEVICE_VERSION,
 				sizeof(v), v, NULL);
 
-		fprintf(stderr, "Using OpenCL: %s, %s\n", n, v);
+		fprintf(stderr, "Using OpenCL    : %s, %s\n", n, v);
 	}
 
 	prop[0] = CL_CONTEXT_PLATFORM;
@@ -94,20 +93,15 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 
 	scene_cl = cldata_create_scene(ctxt, queue, scene);
 
-	mem_pb	= clCreateBuffer(	ctxt,
-					CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR,
-					buf_w * buf_h * 4, pb, NULL);
-	mem_sb	= clCreateBuffer(	ctxt,
-					CL_MEM_READ_WRITE,
+	mem_pb		= clmalloc_ext(	ctxt, CL_MEM_WRITE_ONLY,
+					buf_w * buf_h * 4,
+					pb);
+	mem_sb		= clmalloc_ext(	ctxt, CL_MEM_READ_WRITE,
 					buf_w * buf_h * sizeof(cl_float3),
-					NULL, NULL);
-	mem_cam	= clCreateBuffer(	ctxt,
-					CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-					sizeof(cam_cl), &cam_cl, NULL);
-	mem_scene
-		= clCreateBuffer(	ctxt,
-					CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-					sizeof*(scene_cl), scene_cl, NULL);
+					NULL);
+	mem_cam		= clmalloc_ext(	ctxt, CL_MEM_READ_ONLY,
+					sizeof(cam_cl),
+					&cam_cl);
 
 	clSetKernelArg(kern, 0, sizeof(mem_pb), &mem_pb);
 	clSetKernelArg(kern, 1, sizeof(mem_sb), &mem_sb);
@@ -126,6 +120,8 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 	clSetKernelArg(kern, 14, sizeof(scene_cl->m_bih), &scene_cl->m_bih);
 	clSetKernelArg(kern, 15, sizeof(scene_cl->m_img), &scene_cl->m_img);
 	clSetKernelArg(kern, 16, sizeof(scene_cl->m_box), &scene_cl->m_box);
+
+	cldata_show_mu();
 
 	return 0;
 }
@@ -154,6 +150,7 @@ void clrender_commit(	scene_t *scene, cam_t *cam, vp_t *vp,
 		cam_cl.t	= cam->t;
 		cam_cl.b	= cam->b;
 		cam_cl.n	= cam->n;
+		cam_cl.ap	= cam->ap;
 
 		clEnqueueUnmapMemObject(queue,
 					mem_cam, &cam_cl,

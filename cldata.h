@@ -25,7 +25,8 @@ typedef struct
 	real_cl_t		t;
 	real_cl_t		b;
 	real_cl_t		n;
-	char			_pad0[12];
+	real_cl_t		ap;
+	char			_pad0[8];
 } cam_cl_t;
 
 typedef struct
@@ -40,7 +41,8 @@ typedef struct
 typedef struct
 {
 	cl_int			tex;
-	char			_pad0[12];
+	cl_int			sha;
+	char			_pad0[8];
 	vec3_cl_t		col;
 	real_cl_t		dif;
 	real_cl_t		amb;
@@ -139,7 +141,9 @@ typedef struct
 	cl_mem			m_box;
 } scene_cl_t;
 
-void *cldata_create_scene(	cl_context c, cl_command_queue q,
+cl_mem	clmalloc_ext(cl_context c, cl_int flg, size_t size, void *ptr);
+void *	cldata_create_scene(	cl_context c, cl_command_queue q,
 				const scene_t *scene);
+void	cldata_show_mu(void);
 
 #endif

@@ -163,6 +163,8 @@ static void rt_commit(void)
 
 static void update(void)
 {
+	real_t aspect = (real_t) WIDTH / (real_t) HEIGHT;
+
 	if (keys[GLUT_KEY_LEFT])
 	{
 		if (keys[GLUT_KEY_SHIFT_L] || keys[GLUT_KEY_SHIFT_R])
@@ -226,6 +228,33 @@ static void update(void)
 	{
 		cam.p.y = cam.p.y - 0.1;
 	}
+
+	if (keys['+'])
+	{
+		cam.ap = cam.ap + 0.005;
+		fprintf(stderr, "\nap: %g\n", cam.ap);
+	}
+	else if (keys['-'])
+	{
+		cam.ap = cam.ap - 0.005;
+		fprintf(stderr, "\nap: %g\n", cam.ap);
+	}
+
+	if (keys['8'])
+	{
+		cam.n = cam.n + 0.1;
+		fprintf(stderr, "\nnear: %g\n", cam.n);
+	}
+	else if (keys['2'])
+	{
+		cam.n = cam.n - 0.1;
+		fprintf(stderr, "\nnear: %g\n", cam.n);
+	}
+
+	cam.l	= -aspect * cam.n;
+	cam.r	= aspect * cam.n;
+	cam.t	= cam.n;
+	cam.b	= -cam.n;
 }
 
 static void display_func(void)
@@ -386,8 +415,6 @@ static void special_up_func(int key, int x, int y)
 
 int main(int argc, char *argv[])
 {
-	real_t	aspect	= (real_t) WIDTH / (real_t) HEIGHT;
-
 	cam.p.x		= 0;
 	cam.p.y		= 0;
 	cam.p.z 	= -1;
@@ -397,11 +424,8 @@ int main(int argc, char *argv[])
 	cam.fv.x	= 0;
 	cam.fv.y	= 0;
 	cam.fv.z	= 1;
-	cam.l		= -aspect;
-	cam.r		= aspect;
-	cam.t		= 1;
-	cam.b		= -1;
 	cam.n		= 1;
+	cam.ap		= 0;
 
 	vp.w		= WIDTH;
 	vp.h		= HEIGHT;

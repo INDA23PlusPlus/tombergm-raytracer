@@ -45,6 +45,7 @@ static mat_t mat[] =
 	/* 2: Herringbone wood */
 	{
 		.tex	= &tex[1],
+		.sha	= 1,
 		.col	= { 1.0, 1.0, 1.0 },
 		.dif	= 1.00,
 		.amb	= 0.00,
@@ -63,12 +64,13 @@ static mat_t mat[] =
 	},
 	/* 4: Shiny gray metal */
 	{
+		.sha	= 1,
 		.col	= { 0.4, 0.4, 0.4 },
-		.dif	= 0.20,
+		.dif	= 0.05,
 		.amb	= 0.00,
-		.ref	= 0.80,
+		.ref	= 0.00,
 		.tra	= 0.00,
-		.ind	= 1.00,
+		.ind	= 0.95,
 	},
 	/* 5: Clear glass */
 	{
@@ -78,6 +80,16 @@ static mat_t mat[] =
 		.ref	= 0.80,
 		.tra	= 0.80,
 		.ind	= 1.52,
+	},
+	/* 6: Shiny gold metal */
+	{
+		.sha	= 1,
+		.col	= { 0.86, 0.67, 0.20 },
+		.dif	= 0.20,
+		.amb	= 0.00,
+		.ref	= 0.00,
+		.tra	= 0.00,
+		.ind	= 0.47,
 	},
 };
 
@@ -237,7 +249,7 @@ static tri_t tri[] =
 	},
 #endif
 
-//#include "mdl/glass-cup.c"
+#include "mdl/xyzrgb_dragon2.c"
 };
 
 static sph_t sph[] =

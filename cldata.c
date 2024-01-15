@@ -1,4 +1,4 @@
-#include <CL/cl.h>
+#include <stdio.h>
 #include <string.h>
 #include <CL/opencl.h>
 #include "cldata.h"
@@ -15,10 +15,13 @@
 static int		n_img;
 static const tex_t *	p_tex[512];
 static void *		p_buf[512];
+static unsigned long	mu;
 
 static void *clmalloc(cl_context c, cl_command_queue q, size_t size, cl_mem *m)
 {
 	void *ptr = malloc(size);
+
+	mu = mu + size;
 
 	*m = clCreateBuffer(	c, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
 				size, ptr, NULL);
@@ -29,6 +32,22 @@ static void *clmalloc(cl_context c, cl_command_queue q, size_t size, cl_mem *m)
 				0, NULL, NULL, NULL);
 
 	return ptr;
+}
+
+cl_mem clmalloc_ext(cl_context c, cl_int flg, size_t size, void *ptr)
+{
+	cl_mem m;
+
+	if (ptr != NULL)
+	{
+		flg = (flg | CL_MEM_USE_HOST_PTR);
+	}
+
+	m = clCreateBuffer(c, flg, size, ptr, NULL);
+
+	mu = mu + size;
+
+	return m;
 }
 
 static void clunmap(cl_context c, cl_command_queue q, void *ptr, cl_mem *m)
@@ -114,6 +133,8 @@ static void copy_mat(	cl_context c, cl_command_queue q,
 	{
 		mat_cl->tex = -1;
 	}
+
+	mat_cl->sha = mat->sha;
 
 	copy_vec3(&mat_cl->col, &mat->col);
 
@@ -246,12 +267,14 @@ static void copy_images(cl_context c, cl_command_queue q, scene_cl_t *scene_cl)
 	int		w	= 4096;
 	int		h	= 4096;
 	int		p	= 4;
-	int		r	= w * p;
-	int		s	= r * h;
+	unsigned long	r	= w * p;
+	unsigned long	s	= r * h;
 	cl_image_format	fmt;
 	cl_image_desc	dsc;
 
 	scene_cl->p_img = malloc(s * n_img);
+
+	mu = mu + s * n_img;
 
 	for (int i = 0; i < n_img; i++)
 	{
@@ -422,4 +445,41 @@ void *cldata_create_scene(	cl_context c, cl_command_queue q,
 	clFinish(q);
 
 	return scene_cl;
+}
+
+void cldata_show_mu(void)
+{
+	const char *	u = "B";
+	unsigned long	i = mu;
+	unsigned long	f = 0;
+
+	if (i > 1023)
+	{
+		u = "kB";
+		f = (i % 1024) * 100 / 1024;
+		i = i / 1024;
+	}
+
+	if (i > 1023)
+	{
+		u = "MB";
+		f = (i % 1024) * 100 / 1024;
+		i = i / 1024;
+	}
+
+	if (i > 1023)
+	{
+		u = "GB";
+		f = (i % 1024) * 100 / 1024;
+		i = i / 1024;
+	}
+
+	if (f == 0)
+	{
+		fprintf(stderr, "CL memory used  : %lu %s\n", i, u);
+	}
+	else
+	{
+		fprintf(stderr, "CL memory used  : %lu.%02lu %s\n", i, f, u);
+	}
 }
