@@ -502,5 +502,9 @@ int main(int argc, char *argv[])
 	render_task_dstr(rt_list, N_THRD);
 #endif
 
+#ifdef CONFIG_CL
+	clrender_dstr();
+#endif
+
 	scene_dstr(&scene);
 }

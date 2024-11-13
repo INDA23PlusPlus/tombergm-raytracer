@@ -1,7 +1,10 @@
-#pragma clang diagnostic ignored "-Weverything"
-#pragma clang diagnostic warning "-Wall"
-#pragma clang diagnostic ignored "-Wtypedef-redefinition"
-#pragma clang diagnostic ignored "-Wunused-parameter"
+#ifndef DEBUG
+# pragma clang diagnostic ignored "-Weverything"
+# pragma clang diagnostic warning "-Wall"
+# pragma clang diagnostic ignored "-Wtypedef-redefinition"
+# pragma clang diagnostic ignored "-Wunused-function"
+# pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
 
 #include "bih.c"
 #include "box.c"

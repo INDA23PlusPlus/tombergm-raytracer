@@ -7,6 +7,7 @@
 #include "vp.h"
 
 int	clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp);
+void	clrender_dstr(void);
 void	clrender_commit(scene_t *scene, cam_t *cam, vp_t *vp,
 			unsigned char *pb, vec3_t *sb,
 			int sn);

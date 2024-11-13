@@ -1,3 +1,4 @@
+#include <CL/cl.h>
 #include <stdio.h>
 #include <string.h>
 #include <CL/opencl.h>
@@ -445,6 +446,97 @@ void *cldata_create_scene(	cl_context c, cl_command_queue q,
 	clFinish(q);
 
 	return scene_cl;
+}
+
+void cldata_dstr_scene(scene_cl_t *scene_cl)
+{
+	if (scene_cl != NULL)
+	{
+		if (scene_cl->m_tex != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_tex);
+		}
+
+		if (scene_cl->p_tex != NULL)
+		{
+			free(scene_cl->p_tex);
+		}
+
+		if (scene_cl->m_mat != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_mat);
+		}
+
+		if (scene_cl->p_mat != NULL)
+		{
+			free(scene_cl->p_mat);
+		}
+
+		if (scene_cl->m_tri != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_tri);
+		}
+
+		if (scene_cl->p_tri != NULL)
+		{
+			free(scene_cl->p_tri);
+		}
+
+		if (scene_cl->m_sph != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_sph);
+		}
+
+		if (scene_cl->p_sph != NULL)
+		{
+			free(scene_cl->p_sph);
+		}
+
+		if (scene_cl->m_prim != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_prim);
+		}
+
+		if (scene_cl->p_prim != NULL)
+		{
+			free(scene_cl->p_prim);
+		}
+
+		if (scene_cl->m_bih != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_bih);
+		}
+
+		if (scene_cl->p_bih != NULL)
+		{
+			free(scene_cl->p_bih);
+		}
+
+		if (scene_cl->m_img != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_img);
+		}
+
+		if (scene_cl->p_img != NULL)
+		{
+			free(scene_cl->p_img);
+		}
+
+		if (scene_cl->m_box != NULL)
+		{
+			clReleaseMemObject(scene_cl->m_box);
+		}
+
+		if (scene_cl->p_box != NULL)
+		{
+			free(scene_cl->p_box);
+		}
+
+		free(scene_cl);
+	}
+
+	n_img = 0;
+	mu = 0;
 }
 
 void cldata_show_mu(void)

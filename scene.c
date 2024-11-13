@@ -249,7 +249,7 @@ static tri_t tri[] =
 	},
 #endif
 
-#include "mdl/xyzrgb_dragon2.c"
+#include "mdl/glass-cup.c"
 };
 
 static sph_t sph[] =

@@ -144,6 +144,7 @@ typedef struct
 cl_mem	clmalloc_ext(cl_context c, cl_int flg, size_t size, void *ptr);
 void *	cldata_create_scene(	cl_context c, cl_command_queue q,
 				const scene_t *scene);
+void	cldata_dstr_scene(scene_cl_t *scene_cl);
 void	cldata_show_mu(void);
 
 #endif

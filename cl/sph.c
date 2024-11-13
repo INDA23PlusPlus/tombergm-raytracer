@@ -66,5 +66,4 @@ void sph_hit(SCENE, const sph_t *sph, ray_t *ray)
 		ray->uv.x = 0.5 + asin(ray->n.x) / M_PI;
 		ray->uv.y = 0.5 + asin(ray->n.z) / M_PI;
 	}
-
 }

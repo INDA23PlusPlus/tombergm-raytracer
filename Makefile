@@ -8,9 +8,11 @@ LDFLAGS		=
 
 ifeq ($(DEBUG),1)
 CPPFLAGS	+= -DDEBUG
+CLCPPFLAGS	+=
 CFLAGS		+= -Og -g -Wall
 else
 CPPFLAGS	+=
+CLCPPFLAGS	+= -P
 CFLAGS		+= -Ofast -flto=auto -fuse-linker-plugin -Wall
 endif
 
@@ -36,8 +38,8 @@ $(OBJDIR):
 
 -include $(OBJDIR)cl.c.d
 
-$(OBJDIR)cl.c: ./cl/main.c | $(OBJDIR)
-	$(CPP) -o $(@) -MMD -MP -MT $(@) -MF $(@:%=%.d) $(CPPFLAGS) $(<)
+$(OBJDIR)cl.c: $(SRCDIR)cl/main.c | $(OBJDIR)
+	$(CPP) -o $(@) -MMD -MP -MT $(@) -MF $(@:%=%.d) $(CPPFLAGS) $(CLCPPFLAGS) $(<)
 
 $(OBJDIR)cl.c.inc: $(OBJDIR)cl.c | $(OBJDIR)
 	sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/g' -e 's/$$/\\n"/g' $(<) >$(@)

@@ -77,9 +77,7 @@ static void trace_reg(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 
 static void trace_bsdf(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 {
-	real_t n_cos;
 	real_t r = MAT(ray->mat)->dif * ray->tr;
-	real_t ind;
 
 	r = min2(0.01f, r);
 
@@ -125,17 +123,20 @@ static void trace_bsdf(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 			(NdotL * (NdotV * (1 - k) + k))	;
 	}
 
-	if (n_cos < 0)
-	{
-		ind = MAT(ray->mat)->ind;
-	}
-	else
-	{
-		ind = 1. / MAT(ray->mat)->ind;
-	}
+#if 0
+	real_t n_cos = dot(ray->n, ray->d);
+	real_t ind;
 
 	{
-#if 0
+		if (n_cos < 0)
+		{
+			ind = MAT(ray->mat)->ind;
+		}
+		else
+		{
+			ind = 1. / MAT(ray->mat)->ind;
+		}
+
 		/* Fresnel */
 		real_t b = ind * ind + LdotM * LdotM - 1;
 
@@ -150,7 +151,9 @@ static void trace_bsdf(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 			F = (LdotM - b) / (LdotM + b);
 			F = F * F;
 		}
+	}
 #else
+	{
 		real_t n = 0.239;
 		real_t k = 3.416;
 		real_t i = n * n - k * k - (1 - LdotM * LdotM);
@@ -160,8 +163,8 @@ static void trace_bsdf(SCENE, ray_t *ray, ray_t *rec, unsigned *rand)
 		i = (a + b) / 2 + LdotM * LdotM;
 		j = sqrt(a) * LdotM;
 		F = (i - j) / (i + j);
-#endif
 	}
+#endif
 
 	{
 		/* Reflection */

@@ -1,7 +1,9 @@
+#include <CL/cl.h>
 #include <stdio.h>
 #include <CL/opencl.h>
 #include "cam.h"
 #include "cldata.h"
+#include "clrender.h"
 #include "scene.h"
 #include "vp.h"
 
@@ -32,6 +34,7 @@ static const char *	src =
 
 int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 {
+	cl_int			res;
 	cl_platform_id		plat[PLAT + 1];
 	cl_context_properties	prop[3];
 	cl_uint			nplat	= 0;
@@ -69,10 +72,32 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 	prop[2] = 0;
 
 	ctxt = clCreateContext(prop, 1, &dev[DEV], NULL, NULL, NULL);
+
+	if (ctxt == NULL)
+	{
+		return -1;
+	}
+
 	queue = clCreateCommandQueueWithProperties(ctxt, dev[DEV], NULL, NULL);
+
+	if (queue == NULL)
+	{
+		clrender_dstr();
+
+		return -1;
+	}
+
 	prog = clCreateProgramWithSource(ctxt, 1, &src, NULL, NULL);
 
-	clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
+	if (prog == NULL)
+	{
+		clrender_dstr();
+
+		return -1;
+	}
+
+	res = clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
+
 	{
 		char log[1024 * 256];
 		size_t log_size;
@@ -86,7 +111,21 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 		}
 	}
 
+	if (res != CL_SUCCESS)
+	{
+		clrender_dstr();
+
+		return -1;
+	}
+
 	kern = clCreateKernel(prog, "render", NULL);
+
+	if (kern == NULL)
+	{
+		clrender_dstr();
+
+		return -1;
+	}
 
 	buf_w = vp->w;
 	buf_h = vp->h;
@@ -124,6 +163,65 @@ int clrender_init(scene_t *scene, unsigned char *pb, const vp_t *vp)
 	cldata_show_mu();
 
 	return 0;
+}
+
+void clrender_dstr(void)
+{
+	if (kern != NULL)
+	{
+		clReleaseKernel(kern);
+
+		kern = NULL;
+	}
+
+	if (scene_cl != NULL)
+	{
+		cldata_dstr_scene(scene_cl);
+
+		scene_cl = NULL;
+	}
+
+	if (mem_pb != NULL)
+	{
+		clReleaseMemObject(mem_pb);
+
+		mem_pb = NULL;
+	}
+
+	if (mem_sb != NULL)
+	{
+		clReleaseMemObject(mem_sb);
+
+		mem_sb = NULL;
+	}
+
+	if (mem_cam != NULL)
+	{
+		clReleaseMemObject(mem_cam);
+
+		mem_cam = NULL;
+	}
+
+	if (prog != NULL)
+	{
+		clReleaseProgram(prog);
+
+		prog = NULL;
+	}
+
+	if (queue != NULL)
+	{
+		clReleaseCommandQueue(queue);
+
+		queue = NULL;
+	}
+
+	if (ctxt != NULL)
+	{
+		clReleaseContext(ctxt);
+
+		ctxt = NULL;
+	}
 }
 
 void clrender_commit(	scene_t *scene, cam_t *cam, vp_t *vp,
