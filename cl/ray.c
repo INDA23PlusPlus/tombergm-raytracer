@@ -258,8 +258,8 @@ static void shade(SCENE, ray_t *ray, ray_t *rec)
 	{
 		/* Directional light */
 		real_t lm	= 0.5;
-		vec3_t lc	= { 1.00, 1.00, 0.95 };
-		vec3_t ln	= {  0.1, -1.0,  0.1 };
+		vec3_t lc	= {  1.00,  1.00,  0.95 };
+		vec3_t ln	= {  0.10, -1.00,  0.10 };
 
 		ln = normalize(ln);
 

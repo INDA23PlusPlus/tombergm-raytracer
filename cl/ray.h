@@ -10,21 +10,21 @@ typedef struct ray_struct		ray_t;
 
 struct ray_struct
 {
-	int		prev;	/* Previous object */
-	int		curr;	/* Current object */
-	real_t		rc;	/* Recursive coefficient */
 	vec3_t		p;	/* Origin */
 	vec3_t		d;	/* Direction */
 	vec3_t		q;	/* Hit point */
 	vec3_t		n;	/* Hit surface normal */
-	real_t		l;	/* Hit distance */
-	int		mat;	/* Hit material */
 	vec3_t		tc;	/* Texture / material color */
-	real_t		tr;	/* Texture roughness */
-	vec2_t		uv;	/* Hit texture coordinates */
 	vec3_t		tu;	/* World-space u-vector */
 	vec3_t		tv;	/* World-space v-vector */
 	vec3_t		c;	/* Value */
+	vec2_t		uv;	/* Hit texture coordinates */
+	real_t		l;	/* Hit distance */
+	real_t		rc;	/* Recursive coefficient */
+	real_t		tr;	/* Texture roughness */
+	int		prev;	/* Previous object */
+	int		curr;	/* Current object */
+	int		mat;	/* Hit material */
 };
 
 void	ray_trace(SCENE, vec3_t *c, vec3_t *p, vec3_t *d, unsigned *rand);
