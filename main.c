@@ -193,12 +193,12 @@ static void update(void)
 
 	if (keys['Z'])
 	{
-		p = p + 0.1;
+		p = p - 0.1;
 	}
 
 	if (keys['X'])
 	{
-		p = p - 0.1;
+		p = p + 0.1;
 	}
 
 	cam.fv.x = sin(r) * cos(p);
@@ -240,12 +240,12 @@ static void update(void)
 		fprintf(stderr, "\nap: %g\n", cam.ap);
 	}
 
-	if (keys['8'])
+	if (keys['W'])
 	{
 		cam.n = cam.n + 0.1;
 		fprintf(stderr, "\nnear: %g\n", cam.n);
 	}
-	else if (keys['2'])
+	else if (keys['S'])
 	{
 		cam.n = cam.n - 0.1;
 		fprintf(stderr, "\nnear: %g\n", cam.n);
